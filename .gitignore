@@ -1,0 +1,15 @@
+# React Native 通用忽略
+node_modules/
+.expo/
+.env
+*.log
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace
