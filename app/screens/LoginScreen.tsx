@@ -1,6 +1,7 @@
 import React from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
+import { loginWithCARRO } from "../services/auth";
 
 import {
   View,
@@ -15,9 +16,13 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const handleLogin = () => {
-    // 跳转到SSO登录页面
-    navigation.replace("Main"); // 使用 replace 防止返回登录页
+  const handleLogin = async () => {
+    try {
+      const authResult = await loginWithCARRO();
+      navigation.replace("Main");
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
 
   const handleSignUp = () => {
