@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
-import LoginScreen from "./app/screens/LoginScreen";
-import MainTabNavigator from "./app/navigation/MainTabNavigator";
+import LoginScreen from "./src/screens/LoginScreen";
+import MainTabNavigator from "./src/navigation/MainTabNavigator";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { RootStackParamList } from "./app/navigation/types";
+import { RootStackParamList } from "./src/navigation/types";
 
 // SplashScreen.preventAutoHideAsync(); // 阻止自动隐藏
 
