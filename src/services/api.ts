@@ -1,4 +1,4 @@
-import config from "../config";
+import { env, apiUrl } from "../config/env";
 
 interface ApiClientOptions {
   baseUrl?: string;
@@ -11,8 +11,8 @@ class ApiClient {
   private readonly envName: string;
 
   constructor(options: ApiClientOptions = {}) {
-    this.baseUrl = options.baseUrl || config.API_URL;
-    this.envName = config.ENV_NAME;
+    this.baseUrl = options.baseUrl || apiUrl;
+    this.envName = env;
 
     // 初始化默认请求头
     this.defaultHeaders = {
