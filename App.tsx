@@ -4,10 +4,10 @@ import MainTabNavigator from "./src/navigation/MainTabNavigator";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { RootStackParamList } from "./src/navigation/types";
-import { env, apiUrl } from "./src/config/env";
+import { config } from "./src/config/config";
 
-console.log("运行环境:", env);
-console.log("API地址:", apiUrl);
+console.log("运行环境:", config.env);
+console.log("API地址:", config.apiUrl);
 // SplashScreen.preventAutoHideAsync(); // 阻止自动隐藏
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

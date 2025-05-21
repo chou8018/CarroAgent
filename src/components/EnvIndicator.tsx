@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
-import { env, apiUrl } from "../config/env";
+import { config } from "../config/config";
 
 type Position = "top-right" | "top-left" | "bottom-right" | "bottom-left";
 
@@ -16,7 +16,7 @@ const EnvIndicator: React.FC<EnvIndicatorProps> = ({
   textStyle,
 }) => {
   // 确保这里使用严格的相等判断 ===
-  if (env === "production") {
+  if (config.env === "production") {
     return null;
   }
 
@@ -33,7 +33,7 @@ const EnvIndicator: React.FC<EnvIndicatorProps> = ({
     production: "#4CAF50",
   } as const;
 
-  const backgroundColor = envColorMap[env as keyof typeof envColorMap];
+  const backgroundColor = envColorMap[config.env as keyof typeof envColorMap];
 
   const containerStyle: ViewStyle[] = [
     styles.container,
@@ -44,7 +44,9 @@ const EnvIndicator: React.FC<EnvIndicatorProps> = ({
 
   return (
     <View style={containerStyle}>
-      <Text style={[styles.text, textStyle]}>{env.toUpperCase()}</Text>
+      <Text style={[styles.text, textStyle]}>
+        {config.env} {config.version} Build({config.build})
+      </Text>
     </View>
   );
 };
