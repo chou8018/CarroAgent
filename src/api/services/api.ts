@@ -1,4 +1,15 @@
-import { env, apiUrl } from "../config/env";
+import { config } from "../../config/config";
+import { AxiosResponseHeaders, AxiosRequestConfig } from "axios";
+
+export interface ApiResponse<T = any> {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: AxiosResponseHeaders;
+  config: AxiosRequestConfig;
+  request?: any;
+  message?: string;
+}
 
 interface ApiClientOptions {
   baseUrl?: string;
@@ -11,8 +22,8 @@ class ApiClient {
   private readonly envName: string;
 
   constructor(options: ApiClientOptions = {}) {
-    this.baseUrl = options.baseUrl || apiUrl;
-    this.envName = env;
+    this.baseUrl = options.baseUrl || config.apiUrl;
+    this.envName = config.env;
 
     // 初始化默认请求头
     this.defaultHeaders = {

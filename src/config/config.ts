@@ -10,13 +10,14 @@ interface AppConfig {
   env: Environment;
   apiUrl: string;
   // 可以添加其他全局配置项
+  appId: string;
 }
 
 // 默认API URLs
 const DEFAULT_API_URLS = {
-  staging: "https://api.staging.example.com",
-  qa: "https://api.qa.example.com",
-  production: "https://api.example.com",
+  staging: "https://cx-wsapi.getcarsstaging.com/",
+  qa: "https://ws-api-eks.getcars.dev/",
+  production: "https://captain-api.carro.sg/",
 };
 
 // 版本和构建配置
@@ -27,14 +28,17 @@ const VERSION_CONFIGS: Record<
   staging: {
     version: "v1.0.0",
     build: "1",
+    appId: "com.mytukar.wholesaleStaging",
   },
   qa: {
     version: "v1.0.0",
     build: "1",
+    appId: "com.mytukar.wholesaleQA",
   },
   production: {
     version: "v1.0.0",
     build: "1",
+    appId: "com.mytukar.wholesale",
   },
 };
 

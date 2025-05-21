@@ -4,7 +4,9 @@
     "strict": true,
     "jsx": "react-native",
     "jsxImportSource": "react",
-    "types": ["react-native"],
-    "typeRoots": ["node_modules/@types", "src/services"]
+    "types": ["react-native", "node"],
+    "typeRoots": ["node_modules/@types", "src/api/services"],
+    "esModuleInterop": true,
+    "skipLibCheck": true
   }
 }
