@@ -2,6 +2,7 @@ import React from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { loginWithCARRO } from "../services/auth";
+// import EnvIndicator from "../components/EnvIndicator";
 
 import {
   View,
@@ -57,6 +58,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* 版本信息 */}
       <Text style={styles.versionText}>v2.4.2 build 133 staging-cx</Text>
+      {/* <EnvIndicator position="bottom-right" /> */}
     </View>
   );
 };
