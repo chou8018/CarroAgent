@@ -4,14 +4,15 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start --clear",
+    "start:staging": "EXPO_PUBLIC_APP_ENV=staging expo start --clear",
     "start:qa": "EXPO_PUBLIC_APP_ENV=qa expo start --clear",
     "start:prod": "EXPO_PUBLIC_APP_ENV=production expo start --clear",
-    "android": "expo start --android --clear",
-    "android:qa": "EXPO_PUBLIC_APP_ENV=qa expo start --android --clear",
-    "android:prod": "EXPO_PUBLIC_APP_ENV=production expo start --android --clear",
-    "ios": "expo start --ios --clear",
-    "ios:qa": "EXPO_PUBLIC_APP_ENV=qa expo start --ios --clear",
-    "ios:prod": "EXPO_PUBLIC_APP_ENV=production expo start --ios --clear"
+    "build:android:staging": "EXPO_PUBLIC_APP_ENV=staging eas build --platform android",
+    "build:android:qa": "EXPO_PUBLIC_APP_ENV=qa eas build --platform android",
+    "build:android:prod": "EXPO_PUBLIC_APP_ENV=production eas build --platform android",
+    "build:ios:staging": "EXPO_PUBLIC_APP_ENV=staging eas build --platform ios",
+    "build:ios:qa": "EXPO_PUBLIC_APP_ENV=qa eas build --platform ios",
+    "build:ios:prod": "EXPO_PUBLIC_APP_ENV=production eas build --platform ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
