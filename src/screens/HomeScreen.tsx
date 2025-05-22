@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Swiper from "react-native-swiper";
+import { useUserStore } from "../store/userStore";
 
 // 定义导航类型
 type RootStackParamList = {
@@ -33,6 +34,7 @@ type HomeScreenNavigationProp = BottomTabNavigationProp<
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const screenWidth = Dimensions.get("window").width;
+  const user = useUserStore((state) => state.user);
 
   // 广告数据
   const ads = [
@@ -74,14 +76,17 @@ const HomeScreen: React.FC = () => {
       onPress: () => navigation.navigate("Insurance"),
     },
   ];
+  if (!user) return null; // 或显示 loading、登录页等
 
   return (
     <ScrollView style={styles.container}>
       {/* 用户信息区域 */}
       <View style={styles.userInfoContainer}>
         <Text style={styles.companyName}>CARRO® WHOLESALE</Text>
-        <Text style={styles.userName}>Chen Jun</Text>
-        <Text style={styles.userRole}>Superadmin</Text>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userRole}>
+          {user.active_group.role.display_name}
+        </Text>
       </View>
 
       {/* 广告轮播 - 使用 Swiper 替换 Carousel */}

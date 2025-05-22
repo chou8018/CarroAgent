@@ -7,13 +7,18 @@ import {
   Image,
   ScrollView,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useUserStore } from "../store/userStore";
+import EnvIndicator from "../components/EnvIndicator";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ProfileScreen: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
-
+  const user = useUserStore((state) => state.user);
+  const insets = useSafeAreaInsets();
   const handleImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -40,85 +45,87 @@ const ProfileScreen: React.FC = () => {
     Alert.alert(`Action: ${action}`);
   };
 
+  if (!user) return null;
+
   return (
-    <ScrollView style={styles.container}>
-      {/* 用户头像部分 */}
-      <View style={styles.profileHeader}>
-        <TouchableOpacity onPress={handleImageUpload}>
-          <View style={styles.avatarContainer}>
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.avatar} />
-            ) : (
-              <MaterialIcons name="account-circle" size={80} color="#666" />
-            )}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* 用户头像部分 */}
+          <View style={styles.profileHeader}>
+            <TouchableOpacity onPress={handleImageUpload}>
+              <View style={styles.avatarContainer}>
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatar} />
+                ) : (
+                  <MaterialIcons name="account-circle" size={80} color="#666" />
+                )}
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </View>
 
-      {/* 用户信息部分 */}
-      <View style={styles.userInfoContainer}>
-        <Text style={styles.userName}>Chen Jun</Text>
-        <Text style={styles.userRole}>Superadmin</Text>
-        <Text style={styles.userPhone}>+60121212312</Text>
-      </View>
+          {/* 用户信息部分 */}
+          <View style={styles.userInfoContainer}>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userRole}>
+              {user.active_group.role.display_name}
+            </Text>
+            <Text style={styles.userPhone}>{user.phone}</Text>
+          </View>
 
-      {/* 功能项部分 */}
-      <View style={styles.menuContainer}>
-        {/* 分割线 */}
-        <View style={styles.divider} />
+          {/* 功能项部分 */}
+          <View style={styles.menuContainer}>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleAction("Share Feedback")}
+            >
+              <Text style={styles.menuText}>Share Your Feedback</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleAction("Log Out")}
+            >
+              <Text style={styles.menuText}>Log Out</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleAction("Delete Account")}
+            >
+              <Text style={[styles.menuText, styles.deleteText]}>
+                Delete My Account
+              </Text>
+              <MaterialIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+          </View>
+        </ScrollView>
 
-        {/* Share Your Feedback */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAction("Share Feedback")}
+        {/* 固定到底部的组件 */}
+        <View
+          style={[styles.footer, { paddingBottom: (insets.bottom || 0) + 15 }]}
         >
-          <Text style={styles.menuText}>Share Your Feedback</Text>
-          <MaterialIcons name="chevron-right" size={24} color="#999" />
-        </TouchableOpacity>
-
-        {/* 分割线 */}
-        <View style={styles.divider} />
-
-        {/* Log Out */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAction("Log Out")}
-        >
-          <Text style={styles.menuText}>Log Out</Text>
-          <MaterialIcons name="chevron-right" size={24} color="#999" />
-        </TouchableOpacity>
-
-        {/* 分割线 */}
-        <View style={styles.divider} />
-
-        {/* Delete My Account */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAction("Delete Account")}
-        >
-          <Text style={[styles.menuText, styles.deleteText]}>
-            Delete My Account
-          </Text>
-          <MaterialIcons name="chevron-right" size={24} color="#999" />
-        </TouchableOpacity>
-
-        {/* 分割线 */}
-        <View style={styles.divider} />
+          <EnvIndicator position="bottom-center" />
+        </View>
       </View>
-
-      {/* 版本信息 */}
-      <Text style={styles.versionText}>
-        v2.4.2 build 133 staging-cx (116564)
-      </Text>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingBottom: 50, // 为底部留出空间，防止内容被遮挡
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   profileHeader: {
     alignItems: "center",
@@ -180,12 +187,18 @@ const styles = StyleSheet.create({
   deleteText: {
     color: "red",
   },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+  },
   versionText: {
     textAlign: "center",
     color: "#999",
     fontSize: 12,
-    marginTop: 60,
-    marginBottom: 20,
+    marginTop: 8,
   },
 });
 

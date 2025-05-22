@@ -28,8 +28,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       // 存储加密的 access_token
       await setAccessToken(authResult.accessToken);
       // 2. 获取用户信息
-      // const user = await UserService.getCurrentUser();
-      // useUserStore.getState().setUser(user);
+      const user = await UserService.getCurrentUser();
+      useUserStore.getState().setUser(user);
 
       navigation.replace("Main");
     } catch (error) {

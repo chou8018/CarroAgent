@@ -2,7 +2,12 @@ import React from "react";
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 import { config } from "../config/config";
 
-type Position = "top-right" | "top-left" | "bottom-right" | "bottom-left";
+type Position =
+  | "top-right"
+  | "top-left"
+  | "bottom-right"
+  | "bottom-left"
+  | "bottom-center";
 
 interface EnvIndicatorProps {
   position?: Position;
@@ -25,6 +30,7 @@ const EnvIndicator: React.FC<EnvIndicatorProps> = ({
     "top-left": { top: 10, left: 10 },
     "bottom-right": { bottom: 30, right: 30 },
     "bottom-left": { bottom: 10, left: 10 },
+    "bottom-center": { bottom: 30, alignItems: "center" },
   };
 
   const envColorMap = {
