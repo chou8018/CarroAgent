@@ -7,6 +7,7 @@ import { setAccessToken } from "../utils/token";
 import { UserService } from "../api/services/userService";
 import { useUserStore } from "../store/userStore";
 import { clearStorage } from "../utils/token";
+import { useLoadingStore } from "../store/loadingStore";
 
 import {
   View,
@@ -21,7 +22,11 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const setLoading = useLoadingStore.getState().setLoading;
+
   const handleLogin = async () => {
+    setLoading(true); // 请求开始，显示loading
+
     try {
       const authResult = await loginWithCARRO();
       console.log("sso_token:", authResult.accessToken);
@@ -30,10 +35,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       // 2. 获取用户信息
       const user = await UserService.getCurrentUser();
       useUserStore.getState().setUser(user);
-
       navigation.replace("Main");
     } catch (error) {
       console.error("Login failed:", error);
+    } finally {
+      setLoading(false); // 请求结束，隐藏loading
     }
   };
 
