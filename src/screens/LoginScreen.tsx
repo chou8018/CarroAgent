@@ -3,6 +3,10 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { loginWithCARRO } from "../api/services/auth";
 import EnvIndicator from "../components/EnvIndicator";
+import { setAccessToken } from "../utils/token";
+import { UserService } from "../api/services/userService";
+import { useUserStore } from "../store/userStore";
+import { clearStorage } from "../utils/token";
 
 import {
   View,
@@ -20,6 +24,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     try {
       const authResult = await loginWithCARRO();
+      console.log("sso_token:", authResult.accessToken);
+      // 存储加密的 access_token
+      await setAccessToken(authResult.accessToken);
+      // 2. 获取用户信息
+      // const user = await UserService.getCurrentUser();
+      // useUserStore.getState().setUser(user);
+
       navigation.replace("Main");
     } catch (error) {
       console.error("Login failed:", error);
@@ -29,6 +40,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleSignUp = () => {
     // 跳转到注册页面
     // navigation.navigate("SignUp");
+    clearStorage();
   };
 
   return (

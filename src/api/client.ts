@@ -1,6 +1,13 @@
 // src/api/client.ts
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  AxiosHeaders,
+  RawAxiosRequestHeaders,
+} from "axios";
 import { config as appConfig } from "../config/config";
+import { getAccessToken } from "../utils/token";
 
 // 类型扩展
 type CustomResponse<T = any> = AxiosResponse<T> & {
@@ -17,20 +24,29 @@ class ApiClient {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-      },
+      } as RawAxiosRequestHeaders, // 明确类型声明
     });
 
     this.setupInterceptors();
   }
 
+  private async getAuthHeader(): Promise<Record<string, string>> {
+    const token = await getAccessToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   private setupInterceptors() {
     // 请求拦截器
     this.instance.interceptors.request.use(
-      (config) => {
-        const token = ""; // 从存储获取
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      async (config) => {
+        const authHeader = await this.getAuthHeader();
+
+        // 正确的headers合并方式
+        config.headers = new AxiosHeaders({
+          ...config.headers?.toJSON(), // 转换现有headers
+          ...authHeader,
+        });
+
         return config;
       },
       (error) => Promise.reject(error)
@@ -61,7 +77,7 @@ class ApiClient {
     return this.instance.get(url, config);
   }
 
-  // 其他方法...
+  // 其他HTTP方法...
 }
 
 export const apiClient = new ApiClient();

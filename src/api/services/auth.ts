@@ -1,7 +1,10 @@
 // src/services/auth.ts
-import * as AuthSession from 'expo-auth-session';
-import * as Crypto from 'expo-crypto';
-import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from "expo-auth-session";
+import * as Crypto from "expo-crypto";
+import * as WebBrowser from "expo-web-browser";
+
+// module scope 临时缓存
+let _codeVerifier: string;
 
 // 配置参数
 const config = {
@@ -17,84 +20,90 @@ const config = {
 const generateRandomString = async (length: number): Promise<string> => {
   const randomBytes = await Crypto.getRandomBytesAsync(length);
   return Array.from(randomBytes)
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 };
 
-// 获取授权码
+// Base64URL 编码工具
+const base64UrlEncode = (str: string): string => {
+  return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+
+// 获取授权码并换取 access_token
 export const loginWithCARRO = async (): Promise<{
   accessToken: string;
   refreshToken?: string;
   idToken?: string;
 }> => {
   try {
-    // 生成PKCE参数
-    const codeVerifier = await generateRandomString(32);
-    const codeChallenge = await Crypto.digestStringAsync(
+    // 生成 verifier 并缓存
+    if (!_codeVerifier) {
+      _codeVerifier = await generateRandomString(64);
+    }
+
+    const rawChallenge = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      codeVerifier
+      _codeVerifier,
+      { encoding: Crypto.CryptoEncoding.BASE64 }
     );
+    const codeChallenge = base64UrlEncode(rawChallenge);
 
-    // 构建授权请求URL
-    const authRequestOptions: AuthSession.AuthRequestConfig = {
-      clientId: config.clientId,
-      redirectUri: config.redirectUri,
-      scopes: config.scopes,
-      responseType: AuthSession.ResponseType.Code,
-      codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
-      codeChallenge,
-      extraParams: {
-        nonce: await generateRandomString(16),
-      },
-    };
-
-    const authUrl = `${config.authUrl}?` +
+    // 构建授权 URL
+    const authUrl =
+      `${config.authUrl}?` +
       `client_id=${config.clientId}&` +
       `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
       `response_type=code&` +
-      `scope=${encodeURIComponent(config.scopes.join(' '))}&` +
+      `scope=${encodeURIComponent(config.scopes.join(" "))}&` +
       `code_challenge=${codeChallenge}&` +
       `code_challenge_method=S256`;
 
-    // 打开系统浏览器进行认证
+    // 打开系统浏览器认证
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
       config.redirectUri
     );
 
-    if (result.type === 'success') {
-      // 从回调URL中提取code
-      const params = new URLSearchParams(result.url.split('?')[1]);
-      const code = params.get('code');
+    if (result.type === "success") {
+      const params = new URLSearchParams(result.url.split("?")[1]);
+      const code = params.get("code");
+      if (!code) throw new Error("Authorization code not found");
 
-      if (!code) throw new Error('Authorization code not found');
-
-      // 用code交换token
+      // 请求 token
       const tokenResponse = await fetch(config.tokenUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: config.redirectUri,
+        body: JSON.stringify({
           client_id: config.clientId,
-          code_verifier: codeVerifier,
-        }).toString(),
+          code_verifier: _codeVerifier,
+          redirect_uri: config.redirectUri,
+          code,
+          grant_type: "authorization_code",
+        }),
       });
 
-      const tokens = await tokenResponse.json();
+      const json = await tokenResponse.json();
+
+      // 清除 verifier
+      _codeVerifier = "";
+
+      if (!json.success || !json.data?.access_token) {
+        throw new Error(`Token exchange failed: ${JSON.stringify(json)}`);
+      }
+
       return {
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        idToken: tokens.id_token,
+        accessToken: json.data.access_token,
+        refreshToken: json.data.refresh_token,
+        idToken: json.data.id_token,
       };
     }
 
-    throw new Error('Authentication cancelled');
+    throw new Error("Authentication cancelled");
   } catch (error) {
-    console.error('SSO Login Error:', error);
+    console.error("SSO Login Error:", error);
     throw error;
   }
 };
@@ -103,14 +112,14 @@ export const loginWithCARRO = async (): Promise<{
 export const logoutFromCARRO = async (token: string): Promise<void> => {
   try {
     await fetch(config.logoutUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
     });
   } catch (error) {
-    console.error('Logout Error:', error);
+    console.error("Logout Error:", error);
     throw error;
   }
 };
