@@ -32,6 +32,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       console.log("sso_token:", authResult.accessToken);
       // 存储加密的 access_token
       await setAccessToken(authResult.accessToken);
+
       // 2. 获取用户信息
       const user = await UserService.getCurrentUser();
       useUserStore.getState().setUser(user);

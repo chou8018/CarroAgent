@@ -14,11 +14,19 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useUserStore } from "../store/userStore";
 import EnvIndicator from "../components/EnvIndicator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const user = useUserStore((state) => state.user);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp>();
+
   const handleImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -41,8 +49,30 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    Alert.alert("Confirm", "Are you sure you want to log out?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem("access_token");
+          useUserStore.getState().clearUser();
+          navigation.replace("Login");
+        },
+      },
+    ]);
+  };
+
   const handleAction = (action: string) => {
-    Alert.alert(`Action: ${action}`);
+    if (action === "Log Out") {
+      handleLogout();
+    } else {
+      Alert.alert(`Action: ${action}`);
+    }
   };
 
   if (!user) return null;
@@ -193,12 +223,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: "center",
-  },
-  versionText: {
-    textAlign: "center",
-    color: "#999",
-    fontSize: 12,
-    marginTop: 8,
   },
 });
 

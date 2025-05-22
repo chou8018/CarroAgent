@@ -1,6 +1,8 @@
 // src/utils/token.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const ACCESS_TOKEN_KEY = "access_token";
+
 export const setAccessToken = async (
   token: string | null | undefined
 ): Promise<void> => {
@@ -8,15 +10,15 @@ export const setAccessToken = async (
     console.warn("setAccessToken: invalid token, skipping storage");
     return;
   }
-  await AsyncStorage.setItem("access_token", token);
+  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
-  return await AsyncStorage.getItem("access_token");
+  return await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
 };
 
 export const removeAccessToken = async (): Promise<void> => {
-  await AsyncStorage.removeItem("access_token");
+  await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
 export const clearStorage = async () => {
