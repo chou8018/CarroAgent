@@ -47,7 +47,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleSignUp = () => {
     // 跳转到注册页面
     // navigation.navigate("SignUp");
-    clearStorage();
   };
 
   return (
