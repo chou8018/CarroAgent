@@ -10,6 +10,7 @@ import { config } from "./src/config/config";
 import { RootStackParamList } from "./src/navigation/types";
 import { UserService } from "./src/api/services/userService";
 import { useUserStore } from "./src/store/userStore";
+import RequestQuoteScreen from "./src/components/RequestQuote";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -56,6 +57,15 @@ export default function App() {
             name="Main"
             component={MainTabNavigator}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Request"
+            component={RequestQuoteScreen}
+            options={{
+              title: "Request A Quote",
+              presentation: "card", // 这里就是“present”形式的关键
+              headerShown: true,
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>
