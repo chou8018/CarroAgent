@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ const RequestQuoteScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [_, forceUpdate] = useState(0); // 强制刷新用于响应条件变化
 
   useEffect(() => {
     const fetchFormData = async () => {
@@ -27,7 +28,6 @@ const RequestQuoteScreen: React.FC = () => {
         const data = await RequestQuoteService.getDraftForm();
         setFormData(data);
 
-        // 初始化表单值
         const initialValues: Record<string, any> = {};
         data.items.forEach((item) => {
           initialValues[item.name] =
@@ -44,23 +44,57 @@ const RequestQuoteScreen: React.FC = () => {
     fetchFormData();
   }, []);
 
+  const itemMap = useMemo(() => {
+    const map = new Map<number, FormData["items"][0]>();
+    formData?.items.forEach((item) => map.set(item.id, item));
+    return map;
+  }, [formData]);
+
+  const isItemVisible = (item: any): boolean => {
+    if (!formData) return item.visible;
+
+    const controllers = formData.items.filter((field) =>
+      field.type_config?.condition?.action?.some(
+        (action) => action.id === item.id
+      )
+    );
+
+    for (const controller of controllers) {
+      const currentValue = formValues[controller.name];
+      const actions = controller.type_config?.condition?.action;
+      const action = actions?.find(
+        (a) => a.id === item.id && a.value === currentValue
+      );
+      if (action) {
+        return action.action_type === "show";
+      }
+    }
+
+    return item.visible;
+  };
+
   const handleChange = (name: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [name]: value }));
-    // 清除该字段的错误
     setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[name];
       return newErrors;
     });
+
+    // 触发刷新重新计算 visible 状态
+    forceUpdate((i) => i + 1);
   };
 
   const handleSubmit = async () => {
     if (!formData) return;
 
-    // 验证表单
     const newErrors: Record<string, string> = {};
     formData.items.forEach((item) => {
-      if (item.type_config.required && !formValues[item.name]) {
+      if (
+        item.type_config.required &&
+        isItemVisible(item) &&
+        !formValues[item.name]
+      ) {
         newErrors[item.name] =
           item.validate_config?.empty_validate?.empty_tip_message.en ||
           "This field is required";
@@ -74,7 +108,6 @@ const RequestQuoteScreen: React.FC = () => {
 
     try {
       await RequestQuoteService.submitForm(formData.id, formValues);
-      // 提交成功后的处理
       alert("Form submitted successfully!");
     } catch (error) {
       console.error("Failed to submit form:", error);
@@ -107,7 +140,7 @@ const RequestQuoteScreen: React.FC = () => {
       </Text>
 
       {formData.items
-        .filter((item) => item.visible)
+        .filter((item) => isItemVisible(item))
         .map((item) => {
           const commonProps = {
             key: item.id.toString(),
