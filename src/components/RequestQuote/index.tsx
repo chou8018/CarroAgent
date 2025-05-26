@@ -20,14 +20,14 @@ const RequestQuoteScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [_, forceUpdate] = useState(0); // 强制刷新用于响应条件变化
+  const [_, forceUpdate] = useState(0);
+  const [optionsCache, setOptionsCache] = useState<Record<number, any[]>>({});
 
   useEffect(() => {
     const fetchFormData = async () => {
       try {
         const data = await RequestQuoteService.getDraftForm();
         setFormData(data);
-
         const initialValues: Record<string, any> = {};
         data.items.forEach((item) => {
           initialValues[item.name] =
@@ -73,15 +73,77 @@ const RequestQuoteScreen: React.FC = () => {
     return item.visible;
   };
 
+  const loadOptions = async (item: any) => {
+    console.log("💥 loadOptions triggered for", item.name);
+    const ds = item.type_config?.data_source;
+
+    if (!ds || typeof ds.url !== "string" || !ds.url.trim()) {
+      console.warn("❗ Invalid ds.url for", item.name, ds);
+      return;
+    }
+
+    const params: Record<string, any> = {};
+
+    ds.params?.forEach((param: any) => {
+      if (param.value_ref) {
+        const refItem = itemMap.get(param.value_ref);
+        if (refItem) {
+          params[param.name] = formValues[refItem.name];
+        }
+      } else {
+        params[param.name] = param.value;
+      }
+    });
+
+    params["country_code"] = formValues["country_code"] || "MY";
+
+    try {
+      console.log("🚀 Fetching options:", ds.url, params);
+      const rawData = await RequestQuoteService.fetchOptions(ds.url, params);
+
+      const mappedOptions = Array.isArray(rawData)
+        ? rawData.map((opt: any) => ({
+            label: opt.title || opt.label || String(opt.value),
+            value: String(opt.value),
+          }))
+        : [];
+
+      console.log(
+        `[loadOptions] Mapped options for ${item.name}:`,
+        mappedOptions
+      );
+
+      setOptionsCache((prev) => ({ ...prev, [item.id]: mappedOptions }));
+    } catch (e) {
+      console.error("Failed to fetch options for", item.name, e);
+      setOptionsCache((prev) => ({ ...prev, [item.id]: [] }));
+    }
+  };
+
   const handleChange = (name: string, value: any) => {
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+    setFormValues((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      const controller = formData?.items.find((item) => item.name === name);
+      const actions = controller?.type_config?.condition?.action || [];
+
+      actions.forEach((act: any) => {
+        const target = itemMap.get(act.id);
+        if (target) {
+          updated[target.name] = "";
+          loadOptions(target);
+        }
+      });
+
+      return updated;
+    });
+
     setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[name];
       return newErrors;
     });
 
-    // 触发刷新重新计算 visible 状态
     forceUpdate((i) => i + 1);
   };
 
@@ -115,6 +177,77 @@ const RequestQuoteScreen: React.FC = () => {
     }
   };
 
+  const renderField = (item: FormData["items"][0]) => {
+    const key = item.id.toString();
+    const commonProps = {
+      label: item.display_name.en,
+      value: formValues[item.name],
+      onChange: (value: any) => handleChange(item.name, value),
+      error: errors[item.name],
+      required: item.type_config.required,
+      hint: item.type_config.hint?.en,
+    };
+
+    switch (item.type) {
+      case "text":
+        return (
+          <TextField
+            key={key}
+            {...commonProps}
+            textType={item.type_config.text_type}
+            prefix={item.type_config.prefix}
+            suffix={item.type_config.suffix}
+            textCaps={item.type_config.text_caps}
+          />
+        );
+      case "dropdown":
+        return (
+          <DropdownField
+            key={key}
+            {...commonProps}
+            options={optionsCache[item.id] || []}
+            dataSource={item.type_config.data_source}
+            onFocus={() => loadOptions(item)}
+          />
+        );
+      case "radio":
+        return (
+          <RadioField
+            key={key}
+            {...commonProps}
+            options={item.type_config.options || []}
+          />
+        );
+      case "file":
+        const fileUploadConfig = item.type_config.files?.[0]?.upload_config;
+        return (
+          <FileField
+            key={key}
+            {...commonProps}
+            uploadConfig={
+              fileUploadConfig
+                ? {
+                    ...fileUploadConfig,
+                    method: fileUploadConfig.method as "POST" | "PUT" | "PATCH",
+                  }
+                : undefined
+            }
+          />
+        );
+      case "auto_complete_text":
+        return (
+          <AutoCompleteField
+            key={key}
+            {...commonProps}
+            dataSource={item.type_config.data_source}
+            defaultValue={item.type_config.default}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -139,75 +272,7 @@ const RequestQuoteScreen: React.FC = () => {
         Fill out the form below to schedule an inspection.
       </Text>
 
-      {formData.items
-        .filter((item) => isItemVisible(item))
-        .map((item) => {
-          const commonProps = {
-            key: item.id.toString(),
-            label: item.display_name.en,
-            value: formValues[item.name],
-            onChange: (value: any) => handleChange(item.name, value),
-            error: errors[item.name],
-            required: item.type_config.required,
-            hint: item.type_config.hint?.en,
-          };
-
-          switch (item.type) {
-            case "text":
-              return (
-                <TextField
-                  {...commonProps}
-                  textType={item.type_config.text_type}
-                  prefix={item.type_config.prefix}
-                  suffix={item.type_config.suffix}
-                  textCaps={item.type_config.text_caps}
-                />
-              );
-            case "dropdown":
-              return (
-                <DropdownField
-                  {...commonProps}
-                  dataSource={item.type_config.data_source}
-                />
-              );
-            case "radio":
-              return (
-                <RadioField
-                  {...commonProps}
-                  options={item.type_config.options || []}
-                />
-              );
-            case "file":
-              const fileUploadConfig =
-                item.type_config.files?.[0]?.upload_config;
-              return (
-                <FileField
-                  {...commonProps}
-                  uploadConfig={
-                    fileUploadConfig
-                      ? {
-                          ...fileUploadConfig,
-                          method: fileUploadConfig.method as
-                            | "POST"
-                            | "PUT"
-                            | "PATCH",
-                        }
-                      : undefined
-                  }
-                />
-              );
-            case "auto_complete_text":
-              return (
-                <AutoCompleteField
-                  {...commonProps}
-                  dataSource={item.type_config.data_source}
-                  defaultValue={item.type_config.default}
-                />
-              );
-            default:
-              return null;
-          }
-        })}
+      {formData.items.filter(isItemVisible).map(renderField)}
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>
@@ -219,29 +284,11 @@ const RequestQuoteScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  content: {
-    padding: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#333",
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 16,
-    color: "#666",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  content: { padding: 20 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 8, color: "#333" },
+  subtitle: { fontSize: 16, marginBottom: 16, color: "#666" },
   submitButton: {
     backgroundColor: "#FF6B00",
     padding: 16,

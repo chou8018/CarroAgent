@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import axios from "axios";
 
 interface DropdownOption {
   value: string;
@@ -31,6 +30,7 @@ interface DropdownFieldProps {
   error?: string;
   required?: boolean;
   hint?: string;
+  onFocus?: () => Promise<void>;
 }
 
 const DropdownField: React.FC<DropdownFieldProps> = ({
@@ -42,43 +42,26 @@ const DropdownField: React.FC<DropdownFieldProps> = ({
   error,
   required,
   hint,
+  onFocus,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [fetchedOptions, setFetchedOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      if (!dataSource) return;
-
+  const handleOpenModal = async () => {
+    setModalVisible(true);
+    if (dataSource && onFocus) {
       setLoading(true);
       try {
-        const response = await axios.get(dataSource.url, {
-          params: dataSource.params,
-        });
-
-        const items = response.data?.data || [];
-
-        const mapped = items.map((item: any) => ({
-          label: item.label || item.name || item.title || String(item.id),
-          value: String(item.value ?? item.id),
-        }));
-
-        setFetchedOptions(mapped);
-      } catch (err) {
-        console.error("Failed to fetch dropdown options:", err);
-      } finally {
-        setLoading(false);
+        await onFocus();
+      } catch (e) {
+        console.error("Error loading options onFocus:", e);
       }
-    };
-
-    fetchOptions();
-  }, [dataSource]);
-
-  const allOptions = dataSource ? fetchedOptions : options;
+      setLoading(false);
+    }
+  };
 
   const selectedLabel =
-    allOptions.find((opt) => opt.value === value)?.label ||
+    options.find((opt) => opt.value === value)?.label ||
     hint ||
     "Select an option";
 
@@ -91,14 +74,16 @@ const DropdownField: React.FC<DropdownFieldProps> = ({
 
       <TouchableOpacity
         style={[styles.dropdown, error ? styles.errorBorder : null]}
-        onPress={() => setModalVisible(true)}
-        disabled={dataSource && loading}
+        onPress={handleOpenModal}
+        disabled={loading}
       >
         {loading ? (
           <ActivityIndicator size="small" color="#666" />
         ) : (
           <>
-            <Text style={styles.selectedText}>{selectedLabel}</Text>
+            <Text style={[styles.selectedText, !value && { color: "#999" }]}>
+              {selectedLabel}
+            </Text>
             <Icon name="arrow-drop-down" size={24} color="#666" />
           </>
         )}
@@ -117,8 +102,10 @@ const DropdownField: React.FC<DropdownFieldProps> = ({
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <FlatList
-                  data={allOptions}
+                  data={options}
                   keyExtractor={(item) => item.value}
+                  keyboardShouldPersistTaps="handled"
+                  initialNumToRender={20}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.option}
@@ -147,18 +134,9 @@ const DropdownField: React.FC<DropdownFieldProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-    color: "#333",
-  },
-  required: {
-    color: "red",
-  },
+  container: { marginBottom: 20 },
+  label: { fontSize: 16, fontWeight: "500", marginBottom: 8, color: "#333" },
+  required: { color: "red" },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
@@ -170,18 +148,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     minHeight: 50,
   },
-  selectedText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  error: {
-    marginTop: 4,
-    fontSize: 14,
-    color: "red",
-  },
-  errorBorder: {
-    borderColor: "red",
-  },
+  selectedText: { fontSize: 16, color: "#333" },
+  error: { marginTop: 4, fontSize: 14, color: "red" },
+  errorBorder: { borderColor: "red" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -202,16 +171,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#eee",
   },
-  optionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  emptyContainer: {
-    flex: 1,
-    height: 200, // 可根据需要调整弹窗内可视区域高度
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  optionText: { fontSize: 16, color: "#333" },
 });
 
 export default DropdownField;

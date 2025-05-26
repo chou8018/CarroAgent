@@ -16,4 +16,13 @@ export const RequestQuoteService = {
     );
     return response.data;
   },
+
+  // 🔽 新增方法：支持 DropdownField 根据参数加载选项
+  fetchOptions: async (
+    url: string,
+    params: Record<string, any> = {}
+  ): Promise<any[]> => {
+    const response = await apiClient.get<{ data: any[] }>(url, { params });
+    return response.data.data;
+  },
 };
