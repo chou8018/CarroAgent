@@ -14,8 +14,14 @@ import DropdownField from "./formFields/DropdownField";
 import RadioField from "./formFields/RadioField";
 import FileField from "./formFields/FileField";
 import AutoCompleteField from "./formFields/AutoCompleteField";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/types";
+import { useNavigation } from "@react-navigation/native";
 
 const RequestQuoteScreen: React.FC = () => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -148,33 +154,36 @@ const RequestQuoteScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData) return;
-
-    const newErrors: Record<string, string> = {};
-    formData.items.forEach((item) => {
-      if (
-        item.type_config.required &&
-        isItemVisible(item) &&
-        !formValues[item.name]
-      ) {
-        newErrors[item.name] =
-          item.validate_config?.empty_validate?.empty_tip_message.en ||
-          "This field is required";
-      }
+    navigation.navigate("Appointment", {
+      carplateNo: formValues["carplate_no"] || "TEST001",
     });
+    // if (!formData) return;
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+    // const newErrors: Record<string, string> = {};
+    // formData.items.forEach((item) => {
+    //   if (
+    //     item.type_config.required &&
+    //     isItemVisible(item) &&
+    //     !formValues[item.name]
+    //   ) {
+    //     newErrors[item.name] =
+    //       item.validate_config?.empty_validate?.empty_tip_message.en ||
+    //       "This field is required";
+    //   }
+    // });
 
-    try {
-      await RequestQuoteService.submitForm(formData.id, formValues);
-      alert("Form submitted successfully!");
-    } catch (error) {
-      console.error("Failed to submit form:", error);
-      alert("Failed to submit form. Please try again.");
-    }
+    // if (Object.keys(newErrors).length > 0) {
+    //   setErrors(newErrors);
+    //   return;
+    // }
+
+    // try {
+    //   await RequestQuoteService.submitForm(formData.id, formValues);
+    //   alert("Form submitted successfully!");
+    // } catch (error) {
+    //   console.error("Failed to submit form:", error);
+    //   alert("Failed to submit form. Please try again.");
+    // }
   };
 
   const renderField = (item: FormData["items"][0]) => {

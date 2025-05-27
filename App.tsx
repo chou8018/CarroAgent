@@ -11,6 +11,7 @@ import { RootStackParamList } from "./src/navigation/types";
 import { UserService } from "./src/api/services/userService";
 import { useUserStore } from "./src/store/userStore";
 import RequestQuoteScreen from "./src/components/RequestQuote";
+import AppointmentScreen from "./src/screens/AppointmentScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -64,6 +65,15 @@ export default function App() {
             options={{
               title: "Request A Quote",
               presentation: "card", // 这里就是“present”形式的关键
+              headerShown: true,
+            }}
+          />
+          <Stack.Screen
+            name="Appointment"
+            component={AppointmentScreen}
+            options={{
+              title: "Appointment",
+              presentation: "card",
               headerShown: true,
             }}
           />
