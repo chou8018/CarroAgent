@@ -219,16 +219,21 @@ const RequestQuoteScreen: React.FC = () => {
           />
         );
       case "file":
-        const fileUploadConfig = item.type_config.files?.[0]?.upload_config;
+        const fileConfig = item.type_config.files?.[0];
+        const uploadConfig = fileConfig?.upload_config;
+
         return (
           <FileField
             key={key}
             {...commonProps}
             uploadConfig={
-              fileUploadConfig
+              uploadConfig
                 ? {
-                    ...fileUploadConfig,
-                    method: fileUploadConfig.method as "POST" | "PUT" | "PATCH",
+                    ...uploadConfig,
+                    item_id: item.id.toString(),
+                    collection: uploadConfig.collection,
+                    file_item_name: fileConfig.name,
+                    method: uploadConfig.method as "POST" | "PUT" | "PATCH",
                   }
                 : undefined
             }

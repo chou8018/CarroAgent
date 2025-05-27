@@ -85,6 +85,22 @@ class ApiClient {
     return this.instance.put(url, data, config);
   }
 
+  public async post<T = any>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<CustomResponse<T>> {
+    return this.instance.post(url, data, config);
+  }
+
+  public async patch<T = any>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig
+  ): Promise<CustomResponse<T>> {
+    return this.instance.patch(url, data, config);
+  }
+
   // 其他HTTP方法...
 }
 

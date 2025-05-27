@@ -1,7 +1,30 @@
+import { AxiosProgressEvent } from "axios";
+import * as FileSystem from "expo-file-system";
 import { apiClient } from "../../api/client";
 import { FormData } from "./types";
 
+// 根据文件名后缀获取 MIME 类型
+function getMimeType(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    case "pdf":
+      return "application/pdf";
+    case "heic":
+      return "image/heic";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 export const RequestQuoteService = {
+  // 获取草稿表单
   getDraftForm: async (): Promise<FormData> => {
     const response = await apiClient.get<{ data: FormData }>(
       "/api/v2/mobile/sellers/lead-sell-forms/draft-form"
@@ -9,6 +32,7 @@ export const RequestQuoteService = {
     return response.data.data;
   },
 
+  // 提交表单
   submitForm: async (formId: number, data: any) => {
     const response = await apiClient.put(
       `/api/v2/mobile/sellers/lead-sell-forms/${formId}/submit`,
@@ -17,12 +41,48 @@ export const RequestQuoteService = {
     return response.data;
   },
 
-  // 🔽 新增方法：支持 DropdownField 根据参数加载选项
+  // 获取下拉选项
   fetchOptions: async (
     url: string,
     params: Record<string, any> = {}
   ): Promise<any[]> => {
     const response = await apiClient.get<{ data: any[] }>(url, { params });
     return response.data.data;
+  },
+
+  // 上传文件（Base64 JSON 格式，带 data:image/jpeg;base64,... 前缀）
+  uploadFile: async (
+    uri: string,
+    url: string,
+    method: "POST" | "PUT" | "PATCH" = "POST",
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
+    extraFields: Record<string, any> = {}
+  ) => {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const fileName = uri.split("/").pop() || "file.jpg";
+    const mimeType = getMimeType(fileName);
+
+    const payload = {
+      file_item_name: extraFields.file_item_name,
+      item_id: extraFields.item_id,
+      collection: extraFields.collection,
+      file: `data:${mimeType};base64,${base64}`,
+    };
+
+    const config = { onUploadProgress };
+
+    switch (method) {
+      case "POST":
+        return (await apiClient.post(url, payload, config)).data;
+      case "PUT":
+        return (await apiClient.put(url, payload, config)).data;
+      case "PATCH":
+        return (await apiClient.patch(url, payload, config)).data;
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
   },
 };

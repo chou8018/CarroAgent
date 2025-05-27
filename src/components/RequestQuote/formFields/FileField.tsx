@@ -1,4 +1,3 @@
-// src/components/formFields/FileField.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -9,13 +8,18 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { launchImageLibrary } from "react-native-image-picker";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import * as ImageManipulator from "expo-image-manipulator";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { RequestQuoteService } from "../services";
 
 interface UploadConfig {
   url: string;
-  method: "POST" | "PUT" | "PATCH";
-  collection: string;
+  method?: "POST" | "PUT" | "PATCH";
+  collection?: string;
+  item_id?: string;
+  file_item_name?: string;
   headers?: Record<string, string>;
 }
 
@@ -37,115 +41,107 @@ const FileField: React.FC<FileFieldProps> = ({
   error,
   required = false,
   uploadConfig,
-  allowedTypes = ["image/jpeg", "image/png", "application/pdf"],
-  maxFileSize = 5 * 1024 * 1024, // 5MB
+  allowedTypes = ["image/jpeg", "image/png"],
+  maxFileSize = 5 * 1024 * 1024,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const handleFileSelect = async () => {
     try {
-      const result = await launchImageLibrary({
-        mediaType: "mixed",
-        includeBase64: false,
-        quality: 0.8,
-        selectionLimit: 1,
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission denied", "Media library access is required.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsMultipleSelection: false,
       });
 
-      if (result.didCancel) return;
-      if (result.errorCode) {
-        throw new Error(result.errorMessage || "File selection failed");
-      }
+      if (result.canceled) return;
 
       const file = result.assets?.[0];
       if (!file?.uri) return;
 
-      // Validate file type
-      if (allowedTypes && !allowedTypes.includes(file.type || "")) {
-        throw new Error(`Only ${allowedTypes.join(", ")} files are allowed`);
+      const { uri: compressedUri } = await resizeAndCompressImage(file.uri);
+
+      const fileInfo = await FileSystem.getInfoAsync(compressedUri);
+      if (!fileInfo.exists) throw new Error("File does not exist");
+      if (fileInfo.size && fileInfo.size > maxFileSize) {
+        throw new Error(`File must be < ${maxFileSize / (1024 * 1024)}MB`);
       }
 
-      // Validate file size
-      if (file.fileSize && file.fileSize > maxFileSize) {
-        throw new Error(
-          `File size must be less than ${maxFileSize / (1024 * 1024)}MB`
-        );
-      }
-
-      onChange(file.uri);
+      onChange(compressedUri);
 
       if (uploadConfig) {
-        await uploadFile(file);
+        await uploadToServer(compressedUri);
       }
     } catch (error) {
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to select file"
+        error instanceof Error ? error.message : "Upload failed"
       );
       onChange(null);
     }
   };
 
-  const uploadFile = async (file: any) => {
-    if (!uploadConfig) return;
+  const resizeAndCompressImage = async (uri: string) => {
+    const info = await ImageManipulator.manipulateAsync(uri, []);
+    const { width, height } = info;
+    const maxSide = Math.max(width, height);
+    const scale = maxSide > 1200 ? 1200 / maxSide : 1;
 
-    const formData = new FormData();
-    formData.append("file", {
-      uri: file.uri,
-      type: file.type || "image/jpeg",
-      name: file.fileName || `file_${Date.now()}`,
-    } as any);
+    return await ImageManipulator.manipulateAsync(
+      uri,
+      [
+        {
+          resize: {
+            width: Math.round(width * scale),
+            height: Math.round(height * scale),
+          },
+        },
+      ],
+      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+    );
+  };
+
+  const uploadToServer = async (uri: string) => {
+    if (!uploadConfig) return;
 
     setUploading(true);
     setProgress(0);
 
     try {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          setProgress(percent);
-        }
+      const extraFields: Record<string, any> = {
+        item_id: uploadConfig.item_id,
+        collection: uploadConfig.collection,
+        file_item_name: uploadConfig.file_item_name,
       };
 
-      const response = await new Promise((resolve, reject) => {
-        xhr.onreadystatechange = () => {
-          if (xhr.readyState === 4) {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                resolve(JSON.parse(xhr.responseText));
-              } catch {
-                resolve(xhr.responseText);
-              }
-            } else {
-              reject(new Error(xhr.responseText));
-            }
+      await RequestQuoteService.uploadFile(
+        uri,
+        uploadConfig.url,
+        uploadConfig.method || "POST",
+        (event) => {
+          if (event.total) {
+            const percent = Math.round((event.loaded * 100) / event.total);
+            setProgress(percent);
           }
-        };
-
-        xhr.open(uploadConfig.method, uploadConfig.url, true);
-
-        // Set headers
-        const headers = {
-          Accept: "application/json",
-          ...uploadConfig.headers,
-        };
-
-        for (const [key, value] of Object.entries(headers)) {
-          xhr.setRequestHeader(key, value);
-        }
-
-        xhr.send(formData);
-      });
-
-      console.log("Upload successful:", response);
-      return response;
+        },
+        extraFields
+      );
+      setProgress(100);
+      console.log("✅ Upload success", uri);
     } catch (error) {
-      console.error("Upload failed:", error);
+      console.error("Upload error", error);
       throw error;
     } finally {
       setUploading(false);
-      setProgress(0);
+      setTimeout(() => setProgress(0), 500);
     }
   };
 
@@ -220,18 +216,9 @@ const FileField: React.FC<FileFieldProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-    color: "#333",
-  },
-  required: {
-    color: "red",
-  },
+  container: { marginBottom: 20 },
+  label: { fontSize: 16, fontWeight: "500", marginBottom: 8, color: "#333" },
+  required: { color: "red" },
   uploadButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -243,22 +230,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF5F0",
     gap: 8,
   },
-  uploadingButton: {
-    opacity: 0.7,
-  },
-  errorBorder: {
-    borderColor: "red",
-  },
-  error: {
-    marginTop: 4,
-    fontSize: 14,
-    color: "red",
-  },
-  hint: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#666",
-  },
+  uploadingButton: { opacity: 0.7 },
+  errorBorder: { borderColor: "red" },
+  error: { marginTop: 4, fontSize: 14, color: "red" },
+  hint: { marginTop: 4, fontSize: 12, color: "#666" },
   fileContainer: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -292,11 +267,7 @@ const styles = StyleSheet.create({
     padding: 6,
     minWidth: 60,
   },
-  progressText: {
-    color: "#fff",
-    fontSize: 12,
-    textAlign: "center",
-  },
+  progressText: { color: "#fff", fontSize: 12, textAlign: "center" },
   progressBar: {
     height: 4,
     backgroundColor: "rgba(255,255,255,0.3)",
@@ -304,15 +275,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     overflow: "hidden",
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#FF6B00",
-  },
-  buttonText: {
-    color: "#FF6B00",
-    fontSize: 16,
-    fontWeight: "500",
-  },
+  progressFill: { height: "100%", backgroundColor: "#FF6B00" },
+  buttonText: { color: "#FF6B00", fontSize: 16, fontWeight: "500" },
 });
 
 export default FileField;
