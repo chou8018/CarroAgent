@@ -54,7 +54,7 @@ export const RequestQuoteService = {
   uploadFile: async (
     uri: string,
     url: string,
-    method: "POST" | "PUT" | "PATCH" = "POST",
+    method: "POST" | "PUT" | "DELETE" = "POST",
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     extraFields: Record<string, any> = {}
   ) => {
@@ -79,10 +79,44 @@ export const RequestQuoteService = {
         return (await apiClient.post(url, payload, config)).data;
       case "PUT":
         return (await apiClient.put(url, payload, config)).data;
-      case "PATCH":
-        return (await apiClient.patch(url, payload, config)).data;
+      case "DELETE":
+        // DELETE 请求不支持带请求体，去掉 payload
+        return (await apiClient.delete(url, config)).data;
       default:
         throw new Error(`Unsupported method: ${method}`);
     }
+  },
+
+  // 删除上传的文件
+  deleteFile: async (
+    deleteConfig: {
+      url: string;
+      method?: "DELETE" | "POST" | "PUT";
+      collection?: string;
+    },
+    fileId: string
+  ) => {
+    if (!fileId || !deleteConfig?.url) {
+      throw new Error("Missing fileId or delete URL");
+    }
+
+    const url = deleteConfig.url.replace("{file_id}", fileId);
+    let response;
+
+    switch ((deleteConfig.method || "DELETE").toUpperCase()) {
+      case "POST":
+        response = await apiClient.post(url, { id: fileId });
+        break;
+      case "PUT":
+        response = await apiClient.put(url, { id: fileId });
+        break;
+      case "DELETE":
+      default:
+        response = await apiClient.delete(url);
+        break;
+    }
+
+    console.log("删除图片成功:", fileId);
+    return response.data;
   },
 };

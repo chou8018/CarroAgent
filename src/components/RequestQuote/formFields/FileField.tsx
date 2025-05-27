@@ -14,22 +14,39 @@ import * as ImageManipulator from "expo-image-manipulator";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { RequestQuoteService } from "../services";
 
+interface UploadImage {
+  url: string;
+  id: string;
+  cdn_url: string;
+  cdn_watermark_url: string;
+  collection_name: string;
+  file_name: string;
+  thumbnail_url: string;
+  updated_at: string;
+}
+
 interface UploadConfig {
   url: string;
-  method?: "POST" | "PUT" | "PATCH";
+  method?: "POST" | "PUT" | "DELETE";
   collection?: string;
   item_id?: string;
   file_item_name?: string;
   headers?: Record<string, string>;
 }
 
+interface FileValue {
+  uri: string;
+  id: string;
+}
+
 interface FileFieldProps {
   label: string;
-  value: string | null;
-  onChange: (fileUri: string | null) => void;
+  value: FileValue | null;
+  onChange: (file: FileValue | null) => void;
   error?: string;
   required?: boolean;
   uploadConfig?: UploadConfig;
+  deleteConfig?: UploadConfig;
   allowedTypes?: string[];
   maxFileSize?: number; // in bytes
 }
@@ -41,6 +58,8 @@ const FileField: React.FC<FileFieldProps> = ({
   error,
   required = false,
   uploadConfig,
+  deleteConfig,
+
   allowedTypes = ["image/jpeg", "image/png"],
   maxFileSize = 5 * 1024 * 1024,
 }) => {
@@ -75,7 +94,8 @@ const FileField: React.FC<FileFieldProps> = ({
         throw new Error(`File must be < ${maxFileSize / (1024 * 1024)}MB`);
       }
 
-      onChange(compressedUri);
+      // 先把本地压缩图uri传递给外部回调，方便展示loading或预览
+      onChange({ uri: compressedUri, id: "" });
 
       if (uploadConfig) {
         await uploadToServer(compressedUri);
@@ -122,7 +142,7 @@ const FileField: React.FC<FileFieldProps> = ({
         file_item_name: uploadConfig.file_item_name,
       };
 
-      await RequestQuoteService.uploadFile(
+      const response = await RequestQuoteService.uploadFile(
         uri,
         uploadConfig.url,
         uploadConfig.method || "POST",
@@ -135,9 +155,24 @@ const FileField: React.FC<FileFieldProps> = ({
         extraFields
       );
       setProgress(100);
-      console.log("✅ Upload success", uri);
+      const imageData = response.data;
+      const uploadedImage: UploadImage = {
+        url: imageData.url || "",
+        id: imageData.id?.toString() || "",
+        cdn_url: imageData.cdn_url || "",
+        cdn_watermark_url: imageData.cdn_watermark_url || "",
+        collection_name: imageData.collection_name || "",
+        file_name: imageData.file_name || "",
+        thumbnail_url: imageData.thumbnail_url || "",
+        updated_at: imageData.updated_at || "",
+      };
+
+      // 这里传给外部的是带id的完整对象，方便删除时用
+      onChange({ uri, id: uploadedImage.id });
+      console.log("✅ Upload success", imageData);
     } catch (error) {
       console.error("Upload error", error);
+      onChange(null);
       throw error;
     } finally {
       setUploading(false);
@@ -145,8 +180,36 @@ const FileField: React.FC<FileFieldProps> = ({
     }
   };
 
-  const handleRemoveFile = () => {
-    onChange(null);
+  const handleRemoveFile = async () => {
+    if (!deleteConfig || !value) {
+      onChange(null);
+      return;
+    }
+
+    if (!deleteConfig.url) {
+      Alert.alert("Delete Failed", "Delete URL is not configured");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      await RequestQuoteService.deleteFile(
+        { url: deleteConfig.url, method: deleteConfig.method || "DELETE" },
+        value.id
+      );
+
+      console.log("✅ File deleted remotely");
+      onChange(null);
+    } catch (error) {
+      console.error("❌ Delete failed", error);
+      Alert.alert(
+        "Delete Failed",
+        error instanceof Error ? error.message : "Unable to delete the file."
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -159,7 +222,7 @@ const FileField: React.FC<FileFieldProps> = ({
       {value ? (
         <View style={styles.fileContainer}>
           <Image
-            source={{ uri: value }}
+            source={{ uri: value.uri }}
             style={styles.previewImage}
             resizeMode="contain"
           />

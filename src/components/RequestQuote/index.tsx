@@ -221,6 +221,7 @@ const RequestQuoteScreen: React.FC = () => {
       case "file":
         const fileConfig = item.type_config.files?.[0];
         const uploadConfig = fileConfig?.upload_config;
+        const deleteConfig = fileConfig?.delete_config;
 
         return (
           <FileField
@@ -233,7 +234,18 @@ const RequestQuoteScreen: React.FC = () => {
                     item_id: item.id.toString(),
                     collection: uploadConfig.collection,
                     file_item_name: fileConfig.name,
-                    method: uploadConfig.method as "POST" | "PUT" | "PATCH",
+                    method: uploadConfig.method as "POST" | "PUT",
+                  }
+                : undefined
+            }
+            deleteConfig={
+              deleteConfig
+                ? {
+                    ...deleteConfig,
+                    item_id: item.id.toString(),
+                    collection: deleteConfig.collection,
+                    file_item_name: fileConfig.name,
+                    method: deleteConfig.method as "DELETE",
                   }
                 : undefined
             }

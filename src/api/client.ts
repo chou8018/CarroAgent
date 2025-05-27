@@ -24,7 +24,7 @@ class ApiClient {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-      } as RawAxiosRequestHeaders, // 明确类型声明
+      } as RawAxiosRequestHeaders,
     });
 
     this.setupInterceptors();
@@ -36,14 +36,12 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // 请求拦截器
     this.instance.interceptors.request.use(
       async (config) => {
         const authHeader = await this.getAuthHeader();
 
-        // 正确的headers合并方式
         config.headers = new AxiosHeaders({
-          ...config.headers?.toJSON(), // 转换现有headers
+          ...config.headers?.toJSON(),
           ...authHeader,
         });
 
@@ -52,7 +50,6 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // 响应拦截器
     this.instance.interceptors.response.use(
       (response: AxiosResponse): CustomResponse => ({
         ...response,
@@ -101,7 +98,12 @@ class ApiClient {
     return this.instance.patch(url, data, config);
   }
 
-  // 其他HTTP方法...
+  public async delete<T = any>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<CustomResponse<T>> {
+    return this.instance.delete(url, config);
+  }
 }
 
 export const apiClient = new ApiClient();
