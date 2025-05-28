@@ -19,6 +19,10 @@ import {
   AvailableDate,
 } from "../api/types/appointment";
 import dayjs from "dayjs";
+import { Dimensions } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
+const itemWidth = (screenWidth - 15 * 2 - 15 * 4) / 5; // 5列，左右各15边距，4个间距10
 
 type AppointmentScreenRouteProp = RouteProp<RootStackParamList, "Appointment">;
 
@@ -65,7 +69,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
       try {
         setLoading(true);
         const response = await AppointmentService.getAvailablePostcodes();
-        console.log("✅ fetch postcodes success", response);
+        console.log("✅ fetch postcodes success");
 
         setAllPostcodes(response);
       } catch (error) {
@@ -79,7 +83,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
       try {
         setLocationLoading(true);
         const response = await AppointmentService.getAvailableLocations();
-        console.log("✅ fetch locations success", response);
+        console.log("✅ fetch locations success");
 
         const formatted: Location[] = response.map(
           (item: InspectionLocation) => ({
@@ -163,7 +167,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
           locationId: Number(locationId),
           postcode: postCode,
         });
-      console.log("✅ fetch dates success", response);
+      console.log("✅ fetch dates success");
 
       // 提取日期字符串
       const dates = response.map((item) => item.date);
@@ -186,7 +190,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
         locationId: Number(locationId),
         date,
       });
-      console.log("✅ fetch timeslots success", response);
+      // console.log("✅ fetch timeslots success", response);
 
       // response 类型是 { [date: string]: TimeSlot[] }
       const slotsForDate = response[date] || [];
@@ -546,12 +550,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dateItem: {
+    width: itemWidth,
+    height: 60,
     borderWidth: 1,
     borderColor: "#007AFF",
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12, // 最后一列可能需要去掉
+    marginBottom: 10, // 可选：多行布局时增加下间距
   },
   selectedDateItem: {
     backgroundColor: "#007AFF",
@@ -565,6 +572,7 @@ const styles = StyleSheet.create({
   },
 
   timeSlotItem: {
+    height: 60,
     borderWidth: 1,
     borderColor: "#007AFF",
     borderRadius: 8,
