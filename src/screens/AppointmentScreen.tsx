@@ -190,9 +190,11 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
 
       // response 类型是 { [date: string]: TimeSlot[] }
       const slotsForDate = response[date] || [];
-      // 假设 TimeSlot 有个 time 字段是字符串，比如 "10:00 AM"
-      // 如果你只想要字符串数组，可以 map 一下：
-      const slotStrings = slotsForDate.map((slot) => slot.time);
+
+      // 过滤剩余槽位大于0的时间段
+      const availableSlots = slotsForDate.filter((slot) => slot.slots_left > 0);
+      // 映射成字符串数组，只显示时间字符串
+      const slotStrings = availableSlots.map((slot) => slot.time);
       setTimeSlots(slotStrings);
     } catch (error) {
       console.error("Failed to fetch time slots:", error);
