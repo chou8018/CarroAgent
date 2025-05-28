@@ -8,6 +8,7 @@ import {
   FlatList,
   ActivityIndicator,
   Keyboard,
+  Alert,
 } from "react-native";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
@@ -15,7 +16,9 @@ import { AppointmentService } from "../api/services/appointmentService";
 import {
   Postcode as PostcodeItem,
   InspectionLocation,
+  AvailableDate,
 } from "../api/types/appointment";
+import dayjs from "dayjs";
 
 type AppointmentScreenRouteProp = RouteProp<RootStackParamList, "Appointment">;
 
@@ -49,11 +52,21 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
     null
   );
 
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+
+  const [loadingDates, setLoadingDates] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
   useEffect(() => {
     const fetchPostcodes = async () => {
       try {
         setLoading(true);
         const response = await AppointmentService.getAvailablePostcodes();
+        console.log("✅ fetch postcodes success", response);
+
         setAllPostcodes(response);
       } catch (error) {
         console.error("Failed to fetch postcodes:", error);
@@ -66,6 +79,8 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
       try {
         setLocationLoading(true);
         const response = await AppointmentService.getAvailableLocations();
+        console.log("✅ fetch locations success", response);
+
         const formatted: Location[] = response.map(
           (item: InspectionLocation) => ({
             title: item.title,
@@ -102,6 +117,15 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
     setFilteredPostcodes([]);
     setShowPostcodeList(false);
     Keyboard.dismiss();
+
+    const found = allPostcodes.find((item) => item.postcode === postcode);
+    if (found?.location_id) {
+      fetchAvailableDates(found.location_id.toString());
+    } else {
+      setAvailableDates([]);
+      setSelectedDate(null);
+      setTimeSlots([]);
+    }
   };
 
   const handlePostcodeChange = (text: string) => {
@@ -109,6 +133,9 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
     if (text.length === 0) {
       setShowPostcodeList(false);
       setFilteredPostcodes([]);
+      setAvailableDates([]);
+      setSelectedDate(null);
+      setTimeSlots([]);
     }
   };
 
@@ -125,6 +152,97 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
   const handleLocationSelect = (item: Location) => {
     setSelectedLocation(item);
     setShowLocationList(false);
+    fetchAvailableDates(item.value);
+  };
+
+  const fetchAvailableDates = async (locationId: string) => {
+    try {
+      setLoadingDates(true);
+      const response: AvailableDate[] =
+        await AppointmentService.getAvailableDates({
+          locationId: Number(locationId),
+          postcode: postCode,
+        });
+      console.log("✅ fetch dates success", response);
+
+      // 提取日期字符串
+      const dates = response.map((item) => item.date);
+      setAvailableDates(dates);
+      setSelectedDate(null);
+      setTimeSlots([]);
+      setSelectedTimeSlot(null);
+    } catch (error) {
+      console.error("Failed to fetch available dates:", error);
+      setAvailableDates([]);
+    } finally {
+      setLoadingDates(false);
+    }
+  };
+
+  const fetchTimeSlots = async (locationId: string, date: string) => {
+    try {
+      setLoadingSlots(true);
+      const response = await AppointmentService.getTimeSlots({
+        locationId: Number(locationId),
+        date,
+      });
+      console.log("✅ fetch timeslots success", response);
+
+      // response 类型是 { [date: string]: TimeSlot[] }
+      const slotsForDate = response[date] || [];
+      // 假设 TimeSlot 有个 time 字段是字符串，比如 "10:00 AM"
+      // 如果你只想要字符串数组，可以 map 一下：
+      const slotStrings = slotsForDate.map((slot) => slot.time);
+      setTimeSlots(slotStrings);
+    } catch (error) {
+      console.error("Failed to fetch time slots:", error);
+      setTimeSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setSelectedTimeSlot(null);
+    const locationId = isMobileSelected
+      ? allPostcodes.find((item) => item.postcode === postCode)?.location_id
+      : selectedLocation?.value;
+
+    if (locationId) {
+      fetchTimeSlots(locationId.toString(), date);
+    } else {
+      setTimeSlots([]);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isMobileSelected) {
+      if (!postCode) {
+        Alert.alert("Validation", "Please enter postcode.");
+        return;
+      }
+      if (!address) {
+        Alert.alert("Validation", "Please enter address.");
+        return;
+      }
+    } else {
+      if (!selectedLocation) {
+        Alert.alert("Validation", "Please select a location.");
+        return;
+      }
+    }
+    if (!selectedDate) {
+      Alert.alert("Validation", "Please select a date.");
+      return;
+    }
+    if (!selectedTimeSlot) {
+      Alert.alert("Validation", "Please select a time slot.");
+      return;
+    }
+
+    // 这里你可以写提交预约的逻辑
+    Alert.alert("Success", "Appointment submitted successfully!");
   };
 
   return (
@@ -191,6 +309,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
                 keyboardType="number-pad"
                 onFocus={handleInputFocus}
                 onBlur={() => setShowPostcodeList(false)}
+                returnKeyType="done"
               />
               {showPostcodeList && filteredPostcodes.length > 0 && (
                 <View style={styles.postcodeListContainer}>
@@ -240,21 +359,22 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
             (locationLoading ? (
               <ActivityIndicator size="small" color="#007AFF" />
             ) : (
-              <View style={styles.postcodeListContainer}>
+              <View style={styles.locationListContainer}>
                 <FlatList
                   data={locations}
                   keyExtractor={(item) => item.value}
                   renderItem={({ item }) => (
                     <TouchableOpacity
-                      style={styles.postcodeItem}
+                      style={styles.locationItem}
                       onPress={() => handleLocationSelect(item)}
                     >
-                      <Text style={styles.postcodeText}>{item.title}</Text>
+                      <Text>{item.title}</Text>
                     </TouchableOpacity>
                   )}
                   ItemSeparatorComponent={() => (
                     <View style={styles.separator} />
                   )}
+                  keyboardShouldPersistTaps="always"
                   nestedScrollEnabled
                 />
               </View>
@@ -262,7 +382,75 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
         </>
       )}
 
-      <TouchableOpacity style={styles.submitButton}>
+      <Text style={styles.label}>Select Date *</Text>
+      {loadingDates ? (
+        <ActivityIndicator size="small" color="#007AFF" />
+      ) : (
+        <FlatList
+          data={availableDates}
+          horizontal
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.dateItem,
+                selectedDate === item && styles.selectedDateItem,
+              ]}
+              onPress={() => handleDateSelect(item)}
+            >
+              <Text
+                style={[
+                  styles.dateText,
+                  selectedDate === item && styles.selectedDateText,
+                ]}
+              >
+                {dayjs(item).format("MMM D, YYYY")}
+              </Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={() => (
+            <Text style={styles.noDataText}>No available dates</Text>
+          )}
+        />
+      )}
+
+      <Text style={styles.label}>Select Time Slot *</Text>
+      {loadingSlots ? (
+        <ActivityIndicator size="small" color="#007AFF" />
+      ) : (
+        <FlatList
+          data={timeSlots}
+          horizontal
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.timeSlotItem,
+                selectedTimeSlot === item && styles.selectedTimeSlotItem,
+              ]}
+              onPress={() => setSelectedTimeSlot(item)}
+            >
+              <Text
+                style={[
+                  styles.dateText,
+                  selectedTimeSlot === item && styles.selectedDateText,
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={() => (
+            <Text style={styles.noDataText}>No available time slots</Text>
+          )}
+        />
+      )}
+
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
     </View>
@@ -270,67 +458,139 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20, color: "#000" },
-  subHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#000",
-  },
-  description: { fontSize: 14, color: "#666", marginBottom: 20 },
-  selectionContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    overflow: "hidden",
-  },
+  container: { padding: 20, flex: 1, backgroundColor: "#fff" },
+  header: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
+  subHeader: { fontSize: 16, fontWeight: "600" },
+  description: { marginBottom: 20, color: "#666" },
+
+  selectionContainer: { flexDirection: "row", marginBottom: 20 },
   selectionButton: {
     flex: 1,
-    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    paddingVertical: 8,
+    marginHorizontal: 5,
+    borderRadius: 5,
     alignItems: "center",
-    backgroundColor: "#fff",
   },
-  selectedButton: { backgroundColor: "#007AFF" },
-  selectionButtonText: { fontSize: 16, color: "#000" },
-  selectedButtonText: { color: "#fff" },
-  label: { fontSize: 16, fontWeight: "bold", marginBottom: 8, color: "#000" },
+  selectedButton: {
+    backgroundColor: "#007AFF",
+  },
+  selectionButtonText: {
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+  selectedButtonText: {
+    color: "#fff",
+  },
+
+  label: {
+    fontWeight: "600",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+
   carplate: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 20,
-    color: "#000",
+    marginBottom: 15,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#ccc",
     borderRadius: 5,
-    padding: 12,
-    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     fontSize: 16,
     color: "#000",
   },
+
   postcodeListContainer: {
-    maxHeight: 200,
+    maxHeight: 120,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#ccc",
     borderRadius: 5,
-    marginBottom: 20,
+    marginTop: 4,
+    backgroundColor: "#fff",
+    zIndex: 9999,
   },
-  postcodeItem: { padding: 12, backgroundColor: "#fff" },
-  postcodeText: { fontSize: 16, color: "#000" },
-  separator: { height: 1, backgroundColor: "#eee" },
+
+  postcodeItem: {
+    padding: 10,
+  },
+  postcodeText: {
+    fontSize: 16,
+  },
+
+  locationListContainer: {
+    maxHeight: 180,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    marginTop: 4,
+    backgroundColor: "#fff",
+  },
+  locationItem: {
+    padding: 10,
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: "#eee",
+  },
+
+  dateList: {
+    paddingVertical: 10,
+  },
+  dateItem: {
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
+  },
+  selectedDateItem: {
+    backgroundColor: "#007AFF",
+  },
+  dateText: {
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+  selectedDateText: {
+    color: "#fff",
+  },
+
+  timeSlotItem: {
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
+  },
+  selectedTimeSlotItem: {
+    backgroundColor: "#007AFF",
+  },
+
+  noDataText: {
+    color: "#999",
+    fontStyle: "italic",
+  },
+
   submitButton: {
     backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 5,
-    alignItems: "center",
+    borderRadius: 8,
     marginTop: 20,
+    paddingVertical: 14,
+    alignItems: "center",
   },
-  submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  submitButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });
 
 export default AppointmentScreen;
