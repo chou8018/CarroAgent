@@ -5,10 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
+  ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
+import { InspectionService } from "../api/services/inspectionService";
 
 type AppointmentScreenRouteProp = RouteProp<RootStackParamList, "Appointment">;
 
@@ -16,34 +19,76 @@ interface AppointmentScreenProps {
   route: AppointmentScreenRouteProp;
 }
 
+interface PostcodeItem {
+  location_id: number;
+  postcode: string;
+}
+
 const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
   const { carplateNo } = route.params;
-  const [isMobileSelected, setIsMobileSelected] = useState<boolean>(true); // Set to true by default
-  const [isInspectionPointSelected, setIsInspectionPointSelected] =
-    useState<boolean>(false);
+  const [isMobileSelected, setIsMobileSelected] = useState<boolean>(true);
   const [postCode, setPostCode] = useState<string>("");
   const [address, setAddress] = useState<string>("");
-  const [inspectionPoint, setInspectionPoint] = useState<string>("");
+  const [allPostcodes, setAllPostcodes] = useState<PostcodeItem[]>([]);
+  const [filteredPostcodes, setFilteredPostcodes] = useState<PostcodeItem[]>(
+    []
+  );
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showPostcodeList, setShowPostcodeList] = useState<boolean>(false);
 
-  // Optional: If you want to persist the selection when coming back to this screen
   useEffect(() => {
-    // Reset to default (Mobile selected) when the screen mounts
-    setIsMobileSelected(true);
-    setIsInspectionPointSelected(false);
+    const fetchPostcodes = async () => {
+      try {
+        setLoading(true);
+        const response = await InspectionService.getAvailablePostcodes();
+        console.log("✅ Fetched postcodes:", response);
+        setAllPostcodes(response);
+      } catch (error) {
+        console.error("Failed to fetch postcodes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPostcodes();
   }, []);
 
-  const handleMobileSelect = () => {
-    setIsMobileSelected(true);
-    setIsInspectionPointSelected(false);
+  useEffect(() => {
+    if (postCode.length > 0) {
+      const filtered = allPostcodes.filter((item) =>
+        item.postcode.startsWith(postCode)
+      );
+      setFilteredPostcodes(filtered);
+      setShowPostcodeList(filtered.length > 0);
+    } else {
+      setFilteredPostcodes([]);
+      setShowPostcodeList(false);
+    }
+  }, [postCode, allPostcodes]);
+
+  const handlePostcodeSelect = (postcode: string) => {
+    setPostCode(postcode);
+    setFilteredPostcodes([]);
+    setShowPostcodeList(false);
+    Keyboard.dismiss();
   };
 
-  const handleInspectionPointSelect = () => {
-    setIsMobileSelected(false);
-    setIsInspectionPointSelected(true);
+  const handlePostcodeChange = (text: string) => {
+    setPostCode(text);
+    if (text.length === 0) {
+      setShowPostcodeList(false);
+      setFilteredPostcodes([]);
+    }
+  };
+
+  const handleInputFocus = () => {
+    if (postCode.length > 0 && filteredPostcodes.length > 0) {
+      setShowPostcodeList(true);
+    }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.header}>Request A Quote</Text>
 
       <Text style={styles.subHeader}>Choose Mobile or Inspection Point</Text>
@@ -57,7 +102,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
             styles.selectionButton,
             isMobileSelected && styles.selectedButton,
           ]}
-          onPress={handleMobileSelect}
+          onPress={() => setIsMobileSelected(true)}
         >
           <Text
             style={[
@@ -72,14 +117,14 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
         <TouchableOpacity
           style={[
             styles.selectionButton,
-            isInspectionPointSelected && styles.selectedButton,
+            !isMobileSelected && styles.selectedButton,
           ]}
-          onPress={handleInspectionPointSelect}
+          onPress={() => setIsMobileSelected(false)}
         >
           <Text
             style={[
               styles.selectionButtonText,
-              isInspectionPointSelected && styles.selectedButtonText,
+              !isMobileSelected && styles.selectedButtonText,
             ]}
           >
             Inspection Point
@@ -93,13 +138,46 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
       {isMobileSelected && (
         <>
           <Text style={styles.label}>Post Code *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter post code"
-            value={postCode}
-            onChangeText={setPostCode}
-            placeholderTextColor="#999"
-          />
+          {loading ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter post code"
+                value={postCode}
+                onChangeText={handlePostcodeChange}
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+                onFocus={handleInputFocus}
+                onBlur={() => {
+                  setShowPostcodeList(false);
+                }}
+              />
+
+              {showPostcodeList && filteredPostcodes.length > 0 && (
+                <View style={styles.postcodeListContainer}>
+                  <FlatList
+                    data={filteredPostcodes}
+                    keyExtractor={(item, index) => `${item.postcode}-${index}`}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.postcodeItem}
+                        onPress={() => handlePostcodeSelect(item.postcode)}
+                      >
+                        <Text style={styles.postcodeText}>{item.postcode}</Text>
+                      </TouchableOpacity>
+                    )}
+                    ItemSeparatorComponent={() => (
+                      <View style={styles.separator} />
+                    )}
+                    keyboardShouldPersistTaps="always"
+                    nestedScrollEnabled
+                  />
+                </View>
+              )}
+            </>
+          )}
 
           <Text style={styles.label}>Address *</Text>
           <TextInput
@@ -112,40 +190,16 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ route }) => {
         </>
       )}
 
-      {isInspectionPointSelected && (
-        <>
-          <View style={styles.divider} />
-
-          <Text style={styles.label}>Inspection Point *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Select inspection point"
-            value={inspectionPoint}
-            onChangeText={setInspectionPoint}
-            placeholderTextColor="#999"
-          />
-
-          <View style={styles.divider} />
-        </>
-      )}
-
-      <Text style={styles.footerText}>
-        By submitting this form, you agree to our Terms & Conditions and Privacy
-        Policy
-      </Text>
-
       <TouchableOpacity style={styles.submitButton}>
         <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 };
 
-// ... keep your existing styles ...
-
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     padding: 20,
     backgroundColor: "#fff",
   },
@@ -212,24 +266,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#ddd",
-    marginVertical: 20,
+  postcodeListContainer: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    marginBottom: 20,
   },
-  footerText: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 20,
-    marginBottom: 30,
-    textAlign: "center",
+  postcodeItem: {
+    padding: 12,
+    backgroundColor: "#fff",
+  },
+  postcodeText: {
+    fontSize: 16,
+    color: "#000",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#eee",
   },
   submitButton: {
     backgroundColor: "#007AFF",
     padding: 15,
     borderRadius: 5,
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 20,
   },
   submitButtonText: {
     color: "#fff",
