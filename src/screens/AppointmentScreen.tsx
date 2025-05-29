@@ -282,10 +282,15 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
         };
 
     const newFormData = {
-      items: formData.items,
+      ...formData,
       inspection_appointment,
     };
 
+    // 这种提交格式也是ok的
+    // const newFormData = {
+    //   items: formData.items,
+    //   inspection_appointment,
+    // };
     console.log("🧩 submit formData:", newFormData);
 
     try {
