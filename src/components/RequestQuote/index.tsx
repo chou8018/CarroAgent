@@ -36,8 +36,6 @@ const RequestQuoteScreen: React.FC = () => {
         setFormData(data);
         const initialValues: Record<string, any> = {};
         data.items.forEach((item: FormItem) => {
-          console.log("item.value", item.value);
-
           initialValues[item.name] =
             item.value || item.type_config.default || "";
         });
@@ -197,8 +195,6 @@ const RequestQuoteScreen: React.FC = () => {
       ...formData,
       items: updatedItems,
     };
-    console.log("Before submit assignee_id:", formValues.assignee_id); // 应该是 "1234"，不是 "Nurul ..."
-
     navigation.navigate("Appointment", {
       carplateNo: formValues["car_plate"] || "TEST001",
       formData: updatedFormData,

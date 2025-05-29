@@ -257,10 +257,39 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
       console.warn("url is invalid");
       return;
     }
-    console.log("🧩 submit formData:", formData);
+
+    // 🟡 构建 inspection_appointment 字段并添加到 formData（不影响原逻辑）
+    const date = selectedDate;
+    const time_slot = convertTo24HourFormat(selectedTimeSlot);
+    const locationId = isMobileSelected
+      ? allPostcodes.find((item) => item.postcode === postCode)?.location_id
+      : parseInt(selectedLocation?.value ?? "", 10);
+    const inspection_appointment = isMobileSelected
+      ? {
+          location_type: "mobile",
+          postcode: postCode,
+          location_id: locationId,
+          start_time: date,
+          time_slot,
+          address,
+        }
+      : {
+          location_type: "inspection_point",
+          location_id: locationId,
+          location_name: selectedLocation?.title,
+          start_time: date,
+          time_slot,
+        };
+
+    const newFormData = {
+      items: formData.items,
+      inspection_appointment,
+    };
+
+    console.log("🧩 submit formData:", newFormData);
 
     try {
-      const data = await RequestQuoteService.submitForm(url, formData);
+      const data = await RequestQuoteService.submitForm(url, newFormData);
 
       console.log("✅  submit success:", data);
 
@@ -273,6 +302,21 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const convertTo24HourFormat = (time12h: string): string => {
+    const [time, modifier] = time12h.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
+    if (modifier === "PM" && hours !== 12) {
+      hours += 12;
+    } else if (modifier === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   return (
