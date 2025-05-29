@@ -21,6 +21,8 @@ import dayjs from "dayjs";
 import { Dimensions } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RequestQuoteService } from "../components/RequestQuote/services";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type AppointmentRouteProp = RouteProp<RootStackParamList, "Appointment">;
 const screenWidth = Dimensions.get("window").width;
@@ -66,6 +68,8 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
 
   const route = useRoute<AppointmentRouteProp>();
   const { carplateNo, formData } = route.params;
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     const fetchPostcodes = async () => {
@@ -259,6 +263,11 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
       const data = await RequestQuoteService.submitForm(url, formData);
 
       console.log("✅  submit success:", data);
+
+      // 跳转到主 Tab 的 Sell 页面
+      navigation.navigate("Main", {
+        screen: "Sell",
+      });
     } catch (error) {
       console.error("Failed to fetch form data:", error);
     } finally {

@@ -1,8 +1,9 @@
 import { QuoteFormData } from "../components/RequestQuote/types";
+import { NavigatorScreenParams } from "@react-navigation/native";
 
 export type RootStackParamList = {
   Login: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabParamList>;
   Request: undefined; // 新增
   Appointment: {
     carplateNo: string;
