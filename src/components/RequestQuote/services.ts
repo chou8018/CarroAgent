@@ -1,7 +1,7 @@
 import { AxiosProgressEvent } from "axios";
 import * as FileSystem from "expo-file-system";
 import { apiClient } from "../../api/client";
-import { FormData } from "./types";
+import { QuoteFormData } from "./types";
 
 // 根据文件名后缀获取 MIME 类型
 function getMimeType(fileName: string): string {
@@ -25,19 +25,16 @@ function getMimeType(fileName: string): string {
 
 export const RequestQuoteService = {
   // 获取草稿表单
-  getDraftForm: async (): Promise<FormData> => {
-    const response = await apiClient.get<{ data: FormData }>(
+  getDraftForm: async (): Promise<QuoteFormData> => {
+    const response = await apiClient.get<{ data: QuoteFormData }>(
       "/api/v2/mobile/sellers/lead-sell-forms/draft-form"
     );
     return response.data.data;
   },
 
   // 提交表单
-  submitForm: async (formId: number, data: any) => {
-    const response = await apiClient.put(
-      `/api/v2/mobile/sellers/lead-sell-forms/${formId}/submit`,
-      data
-    );
+  submitForm: async (url: string, data: any) => {
+    const response = await apiClient.put(url, data);
     return response.data;
   },
 

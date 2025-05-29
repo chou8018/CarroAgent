@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { RequestQuoteService } from "./services";
-import { FormData } from "./types";
+import { QuoteFormData, FormItem } from "./types";
 import TextField from "./formFields/TextField";
 import DropdownField from "./formFields/DropdownField";
 import RadioField from "./formFields/RadioField";
@@ -22,7 +22,7 @@ const RequestQuoteScreen: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [formData, setFormData] = useState<FormData | null>(null);
+  const [formData, setFormData] = useState<QuoteFormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,7 +35,9 @@ const RequestQuoteScreen: React.FC = () => {
         const data = await RequestQuoteService.getDraftForm();
         setFormData(data);
         const initialValues: Record<string, any> = {};
-        data.items.forEach((item) => {
+        data.items.forEach((item: FormItem) => {
+          console.log("item.value", item.value);
+
           initialValues[item.name] =
             item.value || item.type_config.default || "";
         });
@@ -51,7 +53,7 @@ const RequestQuoteScreen: React.FC = () => {
   }, []);
 
   const itemMap = useMemo(() => {
-    const map = new Map<number, FormData["items"][0]>();
+    const map = new Map<number, QuoteFormData["items"][0]>();
     formData?.items.forEach((item) => map.set(item.id, item));
     return map;
   }, [formData]);
@@ -154,39 +156,56 @@ const RequestQuoteScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    navigation.navigate("Appointment", {
-      carplateNo: formValues["carplate_no"] || "TEST001",
+    if (!formData) return;
+
+    const newErrors: Record<string, string> = {};
+    formData.items.forEach((item) => {
+      if (
+        item.type_config.required &&
+        isItemVisible(item) &&
+        !formValues[item.name]
+      ) {
+        newErrors[item.name] =
+          item.validate_config?.empty_validate?.empty_tip_message.en ||
+          "This field is required";
+      }
     });
-    // if (!formData) return;
 
-    // const newErrors: Record<string, string> = {};
-    // formData.items.forEach((item) => {
-    //   if (
-    //     item.type_config.required &&
-    //     isItemVisible(item) &&
-    //     !formValues[item.name]
-    //   ) {
-    //     newErrors[item.name] =
-    //       item.validate_config?.empty_validate?.empty_tip_message.en ||
-    //       "This field is required";
-    //   }
-    // });
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
-    // if (Object.keys(newErrors).length > 0) {
-    //   setErrors(newErrors);
-    //   return;
-    // }
+    // ✅ Step 2: 将 formValues 赋回 formData.items[].value
+    const updatedItems = formData.items.map((item) => {
+      let value = formValues[item.name] ?? "";
 
-    // try {
-    //   await RequestQuoteService.submitForm(formData.id, formValues);
-    //   alert("Form submitted successfully!");
-    // } catch (error) {
-    //   console.error("Failed to submit form:", error);
-    //   alert("Failed to submit form. Please try again.");
-    // }
+      // ✅ 强制转换成字符串（仅当为基本类型时）
+      if (typeof value === "number") {
+        value = String(value);
+      } else if (value && typeof value === "object" && "value" in value) {
+        value = String(value.value);
+      }
+
+      return {
+        ...item,
+        value,
+      };
+    });
+
+    const updatedFormData = {
+      ...formData,
+      items: updatedItems,
+    };
+    console.log("Before submit assignee_id:", formValues.assignee_id); // 应该是 "1234"，不是 "Nurul ..."
+
+    navigation.navigate("Appointment", {
+      carplateNo: formValues["car_plate"] || "TEST001",
+      formData: updatedFormData,
+    });
   };
 
-  const renderField = (item: FormData["items"][0]) => {
+  const renderField = (item: QuoteFormData["items"][0]) => {
     const key = item.id.toString();
     const commonProps = {
       label: item.display_name.en,

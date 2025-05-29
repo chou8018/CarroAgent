@@ -58,15 +58,26 @@ const AutoCompleteField: React.FC<AutoCompleteFieldProps> = ({
 
   // 初始化默认值（保持与外部value同步）
   useEffect(() => {
-    if (!isDirty) {
-      const initialValue = value || defaultValue;
-      // setQuery(initialValue);
-      handleClear();
-      if (value !== initialValue) {
-        onChange(initialValue);
-      }
+    if (!isDirty && value && !query) {
+      // 如果传入了 ID，但组件内 query 为空，尝试加载 label
+      fetch(`${dataSource?.url}?id=${value}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const matched = Array.isArray(data)
+            ? data.find((item) => String(item[valueKey]) === String(value))
+            : null;
+          if (matched) {
+            const displayValue = String(
+              matched[displayKey] ?? matched.label ?? ""
+            );
+            setQuery(displayValue); // 只更新 query 用于展示
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch label by ID", err);
+        });
     }
-  }, [value, defaultValue]);
+  }, [value, dataSource?.url]);
 
   // 防抖搜索函数
   const debouncedSearch = useCallback(
@@ -110,11 +121,11 @@ const AutoCompleteField: React.FC<AutoCompleteFieldProps> = ({
 
   // 选择项处理
   const handleSelect = (item: SuggestionItem) => {
-    const displayValue = String(item[displayKey] || item.label || "");
-    const submitValue = String(item[valueKey] || displayValue);
+    const displayValue = String(item[displayKey] ?? item.label ?? "");
+    const submitValue = item[valueKey] != null ? String(item[valueKey]) : "";
 
     setQuery(displayValue);
-    onChange(submitValue);
+    onChange(submitValue); // ✅ 始终是 ID
     setShowSuggestions(false);
     setIsDirty(displayValue !== defaultValue);
     Keyboard.dismiss();

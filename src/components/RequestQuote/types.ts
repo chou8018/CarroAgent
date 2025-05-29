@@ -80,7 +80,7 @@ export interface FormItem {
   };
 }
 
-export interface FormData {
+export interface QuoteFormData {
   id: number;
   lead_id: number | null;
   submit: {
