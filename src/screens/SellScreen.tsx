@@ -8,6 +8,7 @@ import {
   Dimensions,
   ActivityIndicator,
   FlatList,
+  TouchableOpacity,
 } from "react-native";
 import { TabView, TabBar, SceneMap } from "react-native-tab-view";
 import { SellFormNavBarService } from "../api/services/sellFormNavBarService";
@@ -162,31 +163,59 @@ const SubPage = ({
           colors={["#FF6B00"]}
         />
       }
-      renderItem={({ item }) => (
-        <View style={styles.itemContainer}>
-          <Text
-            style={styles.itemTitle}
-          >{`${item.manufacture_year} ${item.car_make} ${item.car_model}`}</Text>
+      renderItem={({ item }) => {
+        const showHandover = item.has_handover_appointment === false;
+        const showPayment = item.has_payment_detail === false;
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Location:</Text>
-            <Text style={styles.infoText}>{item.location}</Text>
-          </View>
+        return (
+          <View style={styles.itemContainer}>
+            <Text style={styles.itemTitle}>
+              {`${item.manufacture_year} ${item.car_make} ${item.car_model}`}
+            </Text>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date:</Text>
-            <Text style={styles.infoText}>{item.date_value}</Text>
-          </View>
-
-          {item.tip?.description ? (
-            <View style={styles.statusBox}>
-              <Text style={[styles.statusText, { color: item.tip.text_color }]}>
-                {item.tip.description}
-              </Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Location:</Text>
+              <Text style={styles.infoText}>{item.location}</Text>
             </View>
-          ) : null}
-        </View>
-      )}
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Date:</Text>
+              <Text style={styles.infoText}>{item.date_value}</Text>
+            </View>
+
+            {item.tip?.description ? (
+              <View style={styles.statusBox}>
+                <Text
+                  style={[styles.statusText, { color: item.tip.text_color }]}
+                >
+                  {item.tip.description}
+                </Text>
+              </View>
+            ) : null}
+
+            {(showHandover || showPayment) && (
+              <View style={styles.buttonRow}>
+                {showHandover && (
+                  <TouchableOpacity style={styles.button}>
+                    <Text style={styles.buttonText}>Handover</Text>
+                  </TouchableOpacity>
+                )}
+                {showPayment && (
+                  <TouchableOpacity style={styles.button}>
+                    <Text style={styles.buttonText}>Payment</Text>
+                  </TouchableOpacity>
+                )}
+                {!showHandover && showPayment && (
+                  <View style={styles.buttonPlaceholder} />
+                )}
+                {!showPayment && showHandover && (
+                  <View style={styles.buttonPlaceholder} />
+                )}
+              </View>
+            )}
+          </View>
+        );
+      }}
       contentContainerStyle={styles.listContainer}
     />
   );
@@ -379,6 +408,42 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 16,
     textAlign: "center",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+  },
+
+  fullWidthButton: {
+    flex: 1,
+    backgroundColor: "#FF6B00",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+
+  halfButton: {
+    flex: 1,
+    backgroundColor: "#FF6B00",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  button: {
+    flex: 1,
+    backgroundColor: "#FF6B00",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  buttonPlaceholder: {
+    flex: 1,
   },
 });
 
