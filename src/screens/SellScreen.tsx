@@ -28,9 +28,41 @@ const CustomTabBar = (props: any) => (
 
 // 定义子页面数据接口
 interface SubPageData {
-  id: string;
+  id: number; // 从 string 改为 number，符合实际数据
   title: string;
-  // 根据实际API返回的字段添加更多属性
+  target_price: string | null;
+  date_value: string;
+  car_plate: string;
+  mileage: string;
+  interchange_car_plate: "yes" | "no";
+  car_model: string | null;
+  manufacture_year: string;
+  year_of_manufacture: string | null;
+  lead_id: number;
+  date_label: string;
+  location?: string; // 原接口有，后端数据未包含
+  tip?: {
+    text_color: string;
+    description: string;
+  };
+  ticket_id: number;
+  status_display_name: string;
+  car_make: string | null;
+  payment_document_urls: string[];
+
+  // ✅ 新增字段
+  discounts?: any[]; // 若有结构可进一步定义
+  has_handover_appointment: boolean;
+  has_payment_detail: boolean;
+  owner_name: string;
+  owner_phone_no: string;
+  price_label: string;
+  price_value: string | null;
+  vouchers?: any[]; // 若有结构可进一步定义
+
+  status: {
+    name: string;
+  };
 }
 
 // 子页面组件
@@ -58,8 +90,9 @@ const SubPage = ({
       if (!apiUrl) {
         throw new Error("No API endpoint available");
       }
-
+      console.log("apiUrl:", apiUrl);
       const response = await apiClient.get<{ data: SubPageData[] }>(apiUrl);
+      console.log("✅ SubPageData:", response.data.data);
       setData(response.data.data);
     } catch (err) {
       // 使用类型保护处理
@@ -121,7 +154,7 @@ const SubPage = ({
   return (
     <FlatList
       data={data}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => item.id.toString()}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -131,8 +164,27 @@ const SubPage = ({
       }
       renderItem={({ item }) => (
         <View style={styles.itemContainer}>
-          <Text style={styles.itemTitle}>{item.title}</Text>
-          {/* 根据实际数据结构渲染更多内容 */}
+          <Text
+            style={styles.itemTitle}
+          >{`${item.manufacture_year} ${item.car_make} ${item.car_model}`}</Text>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Location:</Text>
+            <Text style={styles.infoText}>{item.location}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Date:</Text>
+            <Text style={styles.infoText}>{item.date_value}</Text>
+          </View>
+
+          {item.tip?.description ? (
+            <View style={styles.statusBox}>
+              <Text style={[styles.statusText, { color: item.tip.text_color }]}>
+                {item.tip.description}
+              </Text>
+            </View>
+          ) : null}
         </View>
       )}
       contentContainerStyle={styles.listContainer}
@@ -281,14 +333,44 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   itemContainer: {
-    backgroundColor: "white",
+    backgroundColor: "#fff",
     padding: 16,
-    marginBottom: 8,
-    borderRadius: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   itemTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+  infoLabel: {
+    fontWeight: "500",
+    color: "#666",
+    width: 80,
+  },
+  infoText: {
+    color: "#333",
+    flex: 1,
+  },
+  statusBox: {
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: "#FFF3E8",
+    borderRadius: 8,
+  },
+  statusText: {
+    color: "#FF6B00",
+    fontSize: 14,
   },
   listContainer: {
     padding: 16,
