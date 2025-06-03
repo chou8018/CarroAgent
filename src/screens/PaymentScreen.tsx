@@ -55,6 +55,16 @@ const PaymentScreen: React.FC = () => {
     fetchFormData();
   }, []);
 
+  useEffect(() => {
+    if (!formData) return;
+
+    formData.items.forEach((item) => {
+      if (item.type === "dropdown" && isItemVisible(item)) {
+        loadOptions(item);
+      }
+    });
+  }, [formData]);
+
   const itemMap = useMemo(() => {
     const map = new Map<number, QuoteFormData["items"][0]>();
     formData?.items.forEach((item) => map.set(item.id, item));
@@ -86,6 +96,24 @@ const PaymentScreen: React.FC = () => {
 
   const loadOptions = async (item: any) => {
     console.log("💥 loadOptions triggered for", item.name);
+
+    // ✅ 优先使用静态 options
+    if (
+      Array.isArray(item.type_config?.options) &&
+      item.type_config.options.length > 0
+    ) {
+      const mappedOptions = item.type_config.options.map((opt: any) => ({
+        label: opt.label || opt.title || String(opt.value),
+        value: String(opt.value),
+      }));
+
+      console.log(
+        `[loadOptions] Static options for ${item.name}:`,
+        mappedOptions
+      );
+      setOptionsCache((prev) => ({ ...prev, [item.id]: mappedOptions }));
+      return;
+    }
     const ds = item.type_config?.data_source;
 
     if (!ds || typeof ds.url !== "string" || !ds.url.trim()) {
