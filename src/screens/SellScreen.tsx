@@ -14,8 +14,15 @@ import { TabView, TabBar, SceneMap } from "react-native-tab-view";
 import { SellFormNavBarService } from "../api/services/sellFormNavBarService";
 import type { NavBarItem, NavBarStatusItem } from "../api/types/sellFormNavBar";
 import { apiClient } from "../api/client";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
 
-// 自定义TabBar组件（确保这在使用前定义）
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Appointment"
+>;
+
 const CustomTabBar = (props: any) => (
   <TabBar
     {...props}
@@ -28,7 +35,7 @@ const CustomTabBar = (props: any) => (
 );
 
 // 定义子页面数据接口
-interface SubPageData {
+export interface SubPageData {
   id: number; // 从 string 改为 number，符合实际数据
   title: string;
   target_price: string | null;
@@ -60,6 +67,7 @@ interface SubPageData {
   price_label: string;
   price_value: string | null;
   vouchers?: any[]; // 若有结构可进一步定义
+  processing_fee: number;
 
   status: {
     name: string;
@@ -82,6 +90,7 @@ const SubPage = ({
   // 找到当前routeKey对应的statusItem
   const currentStatusItem = statusItems.find((item) => item.name === routeKey);
   const apiUrl = currentStatusItem?.url || "";
+  const navigation = useNavigation<NavigationProp>();
 
   const fetchData = async () => {
     try {
@@ -169,6 +178,7 @@ const SubPage = ({
 
         return (
           <View style={styles.itemContainer}>
+            <Text style={styles.itemTitle}>{`${item.car_plate}`}</Text>
             <Text style={styles.itemTitle}>
               {`${item.manufacture_year} ${item.car_make} ${item.car_model}`}
             </Text>
@@ -196,12 +206,26 @@ const SubPage = ({
             {(showHandover || showPayment) && (
               <View style={styles.buttonRow}>
                 {showHandover && (
-                  <TouchableOpacity style={styles.button}>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() =>
+                      navigation.navigate("Appointment", {
+                        carplateNo: item.car_plate,
+                      })
+                    }
+                  >
                     <Text style={styles.buttonText}>Handover</Text>
                   </TouchableOpacity>
                 )}
                 {showPayment && (
-                  <TouchableOpacity style={styles.button}>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() =>
+                      navigation.navigate("Payment", {
+                        item, // 传整个对象
+                      })
+                    }
+                  >
                     <Text style={styles.buttonText}>Payment</Text>
                   </TouchableOpacity>
                 )}
