@@ -176,13 +176,32 @@ const SubPage = ({
         const showHandover = item.has_handover_appointment === false;
         const showPayment = item.has_payment_detail === false;
 
+        const isPendingAcceptance =
+          item.status?.name === "lead-sell-form-pending-acceptance" ||
+          item.status?.name ===
+            "lead-sell-form-counter-offer-pending-acceptance";
+        console.log("Status Name:", item.status?.name);
+
         return (
           <View style={styles.itemContainer}>
             <Text style={styles.itemTitle}>{`${item.car_plate}`}</Text>
             <Text style={styles.itemTitle}>
               {`${item.manufacture_year} ${item.car_make} ${item.car_model}`}
             </Text>
-
+            {item.status_display_name && item.tip?.text_color && (
+              <View
+                style={[
+                  styles.statusBadge,
+                  { borderColor: item.tip.text_color },
+                ]}
+              >
+                <Text
+                  style={[styles.statusText, { color: item.tip.text_color }]}
+                >
+                  {item.status_display_name}
+                </Text>
+              </View>
+            )}
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Location:</Text>
               <Text style={styles.infoText}>{item.location}</Text>
@@ -203,39 +222,64 @@ const SubPage = ({
               </View>
             ) : null}
 
-            {(showHandover || showPayment) && (
+            {/* 状态为 pending acceptance 时显示 Not Interested 和 Accept */}
+            {isPendingAcceptance ? (
               <View style={styles.buttonRow}>
-                {showHandover && (
-                  <TouchableOpacity
-                    style={styles.button}
-                    onPress={() =>
-                      navigation.navigate("Appointment", {
-                        carplateNo: item.car_plate,
-                      })
-                    }
-                  >
-                    <Text style={styles.buttonText}>Handover</Text>
-                  </TouchableOpacity>
-                )}
-                {showPayment && (
-                  <TouchableOpacity
-                    style={styles.button}
-                    onPress={() =>
-                      navigation.navigate("Payment", {
-                        item, // 传整个对象
-                      })
-                    }
-                  >
-                    <Text style={styles.buttonText}>Payment</Text>
-                  </TouchableOpacity>
-                )}
-                {!showHandover && showPayment && (
-                  <View style={styles.buttonPlaceholder} />
-                )}
-                {!showPayment && showHandover && (
-                  <View style={styles.buttonPlaceholder} />
-                )}
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonSecondary]}
+                  onPress={() => {
+                    // TODO: 实现 Not Interested 的逻辑
+                    console.log("Not Interested clicked");
+                  }}
+                >
+                  <Text style={styles.buttonText}>Not Interested</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => {
+                    // TODO: 实现 Accept 的逻辑
+                    console.log("Accept clicked");
+                  }}
+                >
+                  <Text style={styles.buttonText}>Accept</Text>
+                </TouchableOpacity>
               </View>
+            ) : (
+              (showHandover || showPayment) && (
+                <View style={styles.buttonRow}>
+                  {showHandover && (
+                    <TouchableOpacity
+                      style={styles.button}
+                      onPress={() =>
+                        navigation.navigate("Appointment", {
+                          carplateNo: item.car_plate,
+                        })
+                      }
+                    >
+                      <Text style={styles.buttonText}>Handover</Text>
+                    </TouchableOpacity>
+                  )}
+                  {showPayment && (
+                    <TouchableOpacity
+                      style={styles.button}
+                      onPress={() =>
+                        navigation.navigate("Payment", {
+                          item,
+                        })
+                      }
+                    >
+                      <Text style={styles.buttonText}>Payment</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!showHandover && showPayment && (
+                    <View style={styles.buttonPlaceholder} />
+                  )}
+                  {!showPayment && showHandover && (
+                    <View style={styles.buttonPlaceholder} />
+                  )}
+                </View>
+              )
             )}
           </View>
         );
@@ -400,7 +444,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 12,
+    marginBottom: 5,
   },
   infoRow: {
     flexDirection: "row",
@@ -468,6 +512,21 @@ const styles = StyleSheet.create({
   },
   buttonPlaceholder: {
     flex: 1,
+  },
+  buttonSecondary: {
+    backgroundColor: "#eee",
+    borderColor: "#ccc",
+    borderWidth: 1,
+  },
+
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 6,
+    marginBottom: 10, // 增加与下方 Location 的间距
   },
 });
 
