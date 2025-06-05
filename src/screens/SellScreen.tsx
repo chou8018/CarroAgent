@@ -17,6 +17,7 @@ import { apiClient } from "../api/client";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+import RejectOfferModal from "./modals/RejectOfferModal";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -91,6 +92,36 @@ const SubPage = ({
   const currentStatusItem = statusItems.find((item) => item.name === routeKey);
   const apiUrl = currentStatusItem?.url || "";
   const navigation = useNavigation<NavigationProp>();
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [currentOffer, setCurrentOffer] = useState<SubPageData | null>(null);
+
+  const handleRejectConfirm = async (targetPrice: string, remarks: string) => {
+    try {
+      // 调用API拒绝报价
+      console.log("Rejecting offer:", {
+        leadId: currentOffer?.lead_id,
+        targetPrice,
+        remarks,
+      });
+
+      // 这里应该是你的API调用，例如：
+      // await apiClient.post(`/offers/${currentOffer?.id}/reject`, {
+      //   target_price: targetPrice,
+      //   remarks
+      // });
+
+      // 成功后刷新数据
+      fetchData();
+
+      // 显示成功提示
+      // showToast('Offer rejected successfully');
+    } catch (error) {
+      console.error("Reject offer failed:", error);
+      // showToast('Failed to reject offer');
+    } finally {
+      setIsRejectModalVisible(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -162,130 +193,138 @@ const SubPage = ({
   }
 
   return (
-    <FlatList
-      data={data}
-      keyExtractor={(item) => item.id.toString()}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={["#FF6B00"]}
-        />
-      }
-      renderItem={({ item }) => {
-        const showHandover = item.has_handover_appointment === false;
-        const showPayment = item.has_payment_detail === false;
+    <>
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#FF6B00"]}
+          />
+        }
+        renderItem={({ item }) => {
+          const showHandover = item.has_handover_appointment === false;
+          const showPayment = item.has_payment_detail === false;
 
-        const isPendingAcceptance =
-          item.status?.name === "lead-sell-form-pending-acceptance" ||
-          item.status?.name ===
-            "lead-sell-form-counter-offer-pending-acceptance";
-        console.log("Status Name:", item.status?.name);
+          const isPendingAcceptance =
+            item.status?.name === "lead-sell-form-pending-acceptance" ||
+            item.status?.name ===
+              "lead-sell-form-counter-offer-pending-acceptance";
+          console.log("Status Name:", item.status?.name);
 
-        return (
-          <View style={styles.itemContainer}>
-            <Text style={styles.itemTitle}>{`${item.car_plate}`}</Text>
-            <Text style={styles.itemTitle}>
-              {`${item.manufacture_year} ${item.car_make} ${item.car_model}`}
-            </Text>
-            {item.status_display_name && item.tip?.text_color && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  { borderColor: item.tip.text_color },
-                ]}
-              >
-                <Text
-                  style={[styles.statusText, { color: item.tip.text_color }]}
+          return (
+            <View style={styles.itemContainer}>
+              <Text style={styles.itemTitle}>{`${item.car_plate}`}</Text>
+              <Text style={styles.itemTitle}>
+                {`${item.manufacture_year} ${item.car_make} ${item.car_model}`}
+              </Text>
+              {item.status_display_name && item.tip?.text_color && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { borderColor: item.tip.text_color },
+                  ]}
                 >
-                  {item.status_display_name}
-                </Text>
-              </View>
-            )}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Location:</Text>
-              <Text style={styles.infoText}>{item.location}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Date:</Text>
-              <Text style={styles.infoText}>{item.date_value}</Text>
-            </View>
-
-            {item.tip?.description ? (
-              <View style={styles.statusBox}>
-                <Text
-                  style={[styles.statusText, { color: item.tip.text_color }]}
-                >
-                  {item.tip.description}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* 状态为 pending acceptance 时显示 Not Interested 和 Accept */}
-            {isPendingAcceptance ? (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.button, styles.buttonSecondary]}
-                  onPress={() => {
-                    // TODO: 实现 Not Interested 的逻辑
-                    console.log("Not Interested clicked");
-                  }}
-                >
-                  <Text style={styles.buttonText}>Not Interested</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => {
-                    // TODO: 实现 Accept 的逻辑
-                    console.log("Accept clicked");
-                  }}
-                >
-                  <Text style={styles.buttonText}>Accept</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              (showHandover || showPayment) && (
-                <View style={styles.buttonRow}>
-                  {showHandover && (
-                    <TouchableOpacity
-                      style={styles.button}
-                      onPress={() =>
-                        navigation.navigate("Appointment", {
-                          carplateNo: item.car_plate,
-                        })
-                      }
-                    >
-                      <Text style={styles.buttonText}>Handover</Text>
-                    </TouchableOpacity>
-                  )}
-                  {showPayment && (
-                    <TouchableOpacity
-                      style={styles.button}
-                      onPress={() =>
-                        navigation.navigate("Payment", {
-                          item,
-                        })
-                      }
-                    >
-                      <Text style={styles.buttonText}>Payment</Text>
-                    </TouchableOpacity>
-                  )}
-                  {!showHandover && showPayment && (
-                    <View style={styles.buttonPlaceholder} />
-                  )}
-                  {!showPayment && showHandover && (
-                    <View style={styles.buttonPlaceholder} />
-                  )}
+                  <Text
+                    style={[styles.statusText, { color: item.tip.text_color }]}
+                  >
+                    {item.status_display_name}
+                  </Text>
                 </View>
-              )
-            )}
-          </View>
-        );
-      }}
-      contentContainerStyle={styles.listContainer}
-    />
+              )}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Location:</Text>
+                <Text style={styles.infoText}>{item.location}</Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Date:</Text>
+                <Text style={styles.infoText}>{item.date_value}</Text>
+              </View>
+
+              {item.tip?.description ? (
+                <View style={styles.statusBox}>
+                  <Text
+                    style={[styles.statusText, { color: item.tip.text_color }]}
+                  >
+                    {item.tip.description}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* 状态为 pending acceptance 时显示 Not Interested 和 Accept */}
+              {isPendingAcceptance ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.buttonSecondary]}
+                    onPress={() => {
+                      setCurrentOffer(item);
+                      setIsRejectModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Not Interested</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => {
+                      // TODO: 实现 Accept 的逻辑
+                      console.log("Accept clicked");
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Accept</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                (showHandover || showPayment) && (
+                  <View style={styles.buttonRow}>
+                    {showHandover && (
+                      <TouchableOpacity
+                        style={styles.button}
+                        onPress={() =>
+                          navigation.navigate("Appointment", {
+                            carplateNo: item.car_plate,
+                          })
+                        }
+                      >
+                        <Text style={styles.buttonText}>Handover</Text>
+                      </TouchableOpacity>
+                    )}
+                    {showPayment && (
+                      <TouchableOpacity
+                        style={styles.button}
+                        onPress={() =>
+                          navigation.navigate("Payment", {
+                            item,
+                          })
+                        }
+                      >
+                        <Text style={styles.buttonText}>Payment</Text>
+                      </TouchableOpacity>
+                    )}
+                    {!showHandover && showPayment && (
+                      <View style={styles.buttonPlaceholder} />
+                    )}
+                    {!showPayment && showHandover && (
+                      <View style={styles.buttonPlaceholder} />
+                    )}
+                  </View>
+                )
+              )}
+            </View>
+          );
+        }}
+        contentContainerStyle={styles.listContainer}
+      />
+      <RejectOfferModal
+        visible={isRejectModalVisible}
+        onCancel={() => setIsRejectModalVisible(false)}
+        onConfirm={handleRejectConfirm}
+        currentOffer={currentOffer}
+      />
+    </>
   );
 };
 
