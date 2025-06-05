@@ -13,6 +13,7 @@ import { useUserStore } from "./src/store/userStore";
 import RequestQuoteScreen from "./src/components/RequestQuote";
 import AppointmentScreen from "./src/screens/AppointmentScreen";
 import PaymentScreen from "./src/screens/PaymentScreen";
+import AcceptPriceScreen from "./src/screens/AcceptPriceScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -85,6 +86,11 @@ export default function App() {
               title: "Payment",
               headerShown: true,
             }}
+          />
+          <Stack.Screen
+            name="AcceptPrice"
+            component={AcceptPriceScreen}
+            options={{ title: "Accept Offer" }}
           />
         </Stack.Navigator>
       </NavigationContainer>

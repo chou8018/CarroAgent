@@ -11,6 +11,9 @@ export type RootStackParamList = {
     formData?: QuoteFormData; // 如果传完整结构（推荐）
   };
   Payment: { item: SubPageData };
+  AcceptPrice: {
+    offer: SubPageData; // 传递完整的报价数据
+  };
 };
 
 export type MainTabParamList = {

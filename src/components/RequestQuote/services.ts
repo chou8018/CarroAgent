@@ -25,6 +25,14 @@ function getMimeType(fileName: string): string {
 
 export const RequestQuoteService = {
   // 获取payment表单
+  getAcceptPriceForm: async (): Promise<QuoteFormData> => {
+    const response = await apiClient.get<{ data: QuoteFormData }>(
+      `/api/v2/mobile/sellers/config/lead-payment-form`
+    );
+    return response.data.data;
+  },
+
+  // 获取payment表单
   getPaymentForm: async (lead_id: string): Promise<QuoteFormData> => {
     const response = await apiClient.get<{ data: QuoteFormData }>(
       `/api/v2/mobile/sellers/lead-sell-forms/${lead_id}/payment-detail-form`

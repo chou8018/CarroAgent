@@ -212,7 +212,7 @@ const SubPage = ({
             item.status?.name === "lead-sell-form-pending-acceptance" ||
             item.status?.name ===
               "lead-sell-form-counter-offer-pending-acceptance";
-          console.log("Status Name:", item.status?.name);
+          // console.log("Status Name:", item.status?.name);
 
           return (
             <View style={styles.itemContainer}>
@@ -271,7 +271,15 @@ const SubPage = ({
                     style={styles.button}
                     onPress={() => {
                       // TODO: 实现 Accept 的逻辑
-                      console.log("Accept clicked");
+                      if (!item) {
+                        console.warn("Cannot navigate - item is undefined");
+                        return;
+                      }
+                      console.log("current item:", item);
+
+                      navigation.navigate("AcceptPrice", {
+                        offer: item, // 传递当前报价项
+                      });
                     }}
                   >
                     <Text style={styles.buttonText}>Accept</Text>
