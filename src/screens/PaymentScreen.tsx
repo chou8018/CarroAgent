@@ -228,10 +228,37 @@ const PaymentScreen: React.FC = () => {
       ...formData,
       items: updatedItems,
     };
-    navigation.navigate("Appointment", {
-      carplateNo: formValues["car_plate"] || "TEST001",
-      formData: updatedFormData,
-    });
+
+    const newFormData = {
+      ...updatedFormData,
+    };
+
+    const url = formData?.submit?.submit_config?.url;
+
+    console.log("submit url:", url);
+
+    if (!url) {
+      console.warn("url is invalid");
+      return;
+    }
+
+    console.log("🧩 submit formData:", newFormData);
+
+    try {
+      const data = await RequestQuoteService.submitFormWithPost(
+        url,
+        newFormData
+      );
+
+      console.log("✅  submit success:", data);
+
+      // 跳转到主 Tab 的 Sell 页面
+      navigation.goBack();
+    } catch (error) {
+      console.error("Failed to fetch form data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderField = (item: QuoteFormData["items"][0]) => {

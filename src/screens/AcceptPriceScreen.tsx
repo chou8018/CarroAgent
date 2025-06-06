@@ -255,10 +255,37 @@ const AcceptPriceScreen: React.FC = () => {
       ...formData,
       items: updatedItems,
     };
-    navigation.navigate("Appointment", {
-      carplateNo: formValues["car_plate"] || "TEST001",
-      formData: updatedFormData,
-    });
+    const urlTemplate = formData?.submit?.submit_config?.url;
+    const offerId = offer.id.toString();
+
+    const url = urlTemplate?.replace("{id}", offerId);
+    console.log("submit url:", url);
+
+    if (!url) {
+      console.warn("url is invalid");
+      return;
+    }
+    const newFormData = {
+      ...updatedFormData,
+    };
+
+    console.log("🧩 submit formData:", newFormData);
+
+    try {
+      const data = await RequestQuoteService.submitFormWithPost(
+        url,
+        newFormData
+      );
+
+      console.log("✅  submit success:", data);
+
+      // 跳转到主 Tab 的 Sell 页面
+      navigation.goBack();
+    } catch (error) {
+      console.error("Failed to fetch form data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderField = (item: QuoteFormData["items"][0]) => {

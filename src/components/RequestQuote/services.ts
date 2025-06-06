@@ -54,6 +54,11 @@ export const RequestQuoteService = {
     return response.data;
   },
 
+  submitFormWithPost: async (url: string, data: any) => {
+    const response = await apiClient.post(url, data);
+    return response.data;
+  },
+
   // 获取下拉选项
   fetchOptions: async (
     url: string,
