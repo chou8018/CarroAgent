@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import RejectOfferModal from "./modals/RejectOfferModal";
+import { RequestQuoteService } from "../components/RequestQuote/services";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -97,6 +98,10 @@ const SubPage = ({
 
   const handleRejectConfirm = async (targetPrice: string, remarks: string) => {
     try {
+      if (!currentOffer?.id || !currentOffer?.lead_id) {
+        console.error("Missing offer ID or lead ID");
+        return;
+      }
       // 调用API拒绝报价
       console.log("Rejecting offer:", {
         leadId: currentOffer?.lead_id,
@@ -104,11 +109,11 @@ const SubPage = ({
         remarks,
       });
 
-      // 这里应该是你的API调用，例如：
-      // await apiClient.post(`/offers/${currentOffer?.id}/reject`, {
-      //   target_price: targetPrice,
-      //   remarks
-      // });
+      const data = await RequestQuoteService.submitRejectOffer(
+        currentOffer.id.toString(),
+        targetPrice,
+        remarks
+      );
 
       // 成功后刷新数据
       fetchData();
@@ -131,7 +136,7 @@ const SubPage = ({
       if (!apiUrl) {
         throw new Error("No API endpoint available");
       }
-      console.log("apiUrl:", apiUrl);
+      // console.log("apiUrl:", apiUrl);
       const response = await apiClient.get<{ data: SubPageData[] }>(apiUrl);
       // console.log("✅ SubPageData:", response.data.data);
       setData(response.data.data);

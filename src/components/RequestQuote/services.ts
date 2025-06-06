@@ -78,6 +78,22 @@ export const RequestQuoteService = {
     }
   },
 
+  submitRejectOffer: async (
+    lead_id: string,
+    target_price: string,
+    remarks: string
+  ): Promise<any[]> => {
+    const payload = {
+      target_price: target_price,
+      remarks: remarks,
+    };
+    const response = await apiClient.post<{ data: any[] }>(
+      `/api/v2/mobile/sellers/lead-sell-forms/${lead_id}/offer-reject`,
+      payload
+    );
+    return response.data.data;
+  },
+
   // 获取下拉选项
   fetchOptions: async (
     url: string,
