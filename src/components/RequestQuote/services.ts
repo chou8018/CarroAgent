@@ -59,6 +59,25 @@ export const RequestQuoteService = {
     return response.data;
   },
 
+  // 提交表单（支持 POST / PUT）
+  submitFormFlexible: async ({
+    url,
+    data,
+    method = "PUT",
+  }: {
+    url: string;
+    data: any;
+    method?: "POST" | "PUT";
+  }) => {
+    switch (method.toUpperCase()) {
+      case "POST":
+        return (await apiClient.post(url, data)).data;
+      case "PUT":
+      default:
+        return (await apiClient.put(url, data)).data;
+    }
+  },
+
   // 获取下拉选项
   fetchOptions: async (
     url: string,

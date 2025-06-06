@@ -133,7 +133,7 @@ const SubPage = ({
       }
       console.log("apiUrl:", apiUrl);
       const response = await apiClient.get<{ data: SubPageData[] }>(apiUrl);
-      console.log("✅ SubPageData:", response.data.data);
+      // console.log("✅ SubPageData:", response.data.data);
       setData(response.data.data);
     } catch (err) {
       // 使用类型保护处理
@@ -294,6 +294,7 @@ const SubPage = ({
                         onPress={() =>
                           navigation.navigate("Appointment", {
                             carplateNo: item.car_plate,
+                            offer: item,
                           })
                         }
                       >

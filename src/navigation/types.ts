@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Appointment: {
     carplateNo: string;
     formData?: QuoteFormData; // 如果传完整结构（推荐）
+    offer?: SubPageData;
   };
   Payment: { item: SubPageData };
   AcceptPrice: {

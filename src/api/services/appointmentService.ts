@@ -14,19 +14,22 @@ export const AppointmentService = {
   /**
    * 获取可用的检查点邮编列表
    */
-  getAvailablePostcodes: async (): Promise<Postcode[]> => {
+  getAvailablePostcodes: async (hasHandover?: boolean): Promise<Postcode[]> => {
+    const params = hasHandover ? { appointment_type: "handover" } : {};
     const response = await apiClient.get<PostcodeResponse>(
-      "api/v2/mobile/config/inspection-postcodes"
+      "api/v2/mobile/config/inspection-postcodes",
+      { params }
     );
     return response.data.data;
   },
 
-  /**
-   * 获取非合作网点的位置数据
-   */
-  getAvailableLocations: async (): Promise<InspectionLocation[]> => {
+  getAvailableLocations: async (
+    hasHandover?: boolean
+  ): Promise<InspectionLocation[]> => {
+    const params = hasHandover ? { appointment_type: "handover" } : {};
     const response = await apiClient.get<LocationResponse>(
-      "api/v2/mobile/config/non-partnership-locations"
+      "api/v2/mobile/config/non-partnership-locations",
+      { params }
     );
     return response.data.data;
   },

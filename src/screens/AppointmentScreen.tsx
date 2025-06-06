@@ -67,16 +67,19 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const route = useRoute<AppointmentRouteProp>();
-  const { carplateNo, formData } = route.params;
+  const { carplateNo, formData, offer } = route.params;
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
+    const hasHandover = !!offer; // offer 有值时为 true，否则为 false
+
     const fetchPostcodes = async () => {
       try {
         setLoading(true);
-        const response = await AppointmentService.getAvailablePostcodes();
-
+        const response = await AppointmentService.getAvailablePostcodes(
+          hasHandover
+        );
         setAllPostcodes(response);
       } catch (error) {
         console.error("Failed to fetch postcodes:", error);
@@ -88,8 +91,9 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
     const fetchLocations = async () => {
       try {
         setLocationLoading(true);
-        const response = await AppointmentService.getAvailableLocations();
-
+        const response = await AppointmentService.getAvailableLocations(
+          hasHandover
+        );
         const formatted: Location[] = response.map(
           (item: InspectionLocation) => ({
             title: item.title,
@@ -242,29 +246,27 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
         return;
       }
     }
+
     if (!selectedDate) {
       Alert.alert("Validation", "Please select a date.");
       return;
     }
+
     if (!selectedTimeSlot) {
       Alert.alert("Validation", "Please select a time slot.");
       return;
     }
 
-    const url = formData?.submit?.submit_config?.url;
+    const hasHandover = !!offer;
 
-    if (!url) {
-      console.warn("url is invalid");
-      return;
-    }
-
-    // 🟡 构建 inspection_appointment 字段并添加到 formData（不影响原逻辑）
+    // 构建 appointment 对象
     const date = selectedDate;
     const time_slot = convertTo24HourFormat(selectedTimeSlot);
     const locationId = isMobileSelected
       ? allPostcodes.find((item) => item.postcode === postCode)?.location_id
       : parseInt(selectedLocation?.value ?? "", 10);
-    const inspection_appointment = isMobileSelected
+
+    const appointment = isMobileSelected
       ? {
           location_type: "mobile",
           postcode: postCode,
@@ -281,29 +283,44 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
           time_slot,
         };
 
-    const newFormData = {
-      ...formData,
-      inspection_appointment,
-    };
+    // 根据 hasHandover 处理 url 和 formData 字段
+    const url = hasHandover
+      ? `api/v2/mobile/sellers/lead-sell-forms/${offer.id}/handover-appointment`
+      : formData?.submit?.submit_config?.url;
 
-    // 这种提交格式也是ok的
-    // const newFormData = {
-    //   items: formData.items,
-    //   inspection_appointment,
-    // };
+    if (!url) {
+      console.warn("url is invalid");
+      return;
+    }
+
+    const newFormData = hasHandover
+      ? {
+          ...formData,
+          handover_appointment: appointment,
+        }
+      : {
+          ...formData,
+          inspection_appointment: appointment,
+        };
+
     console.log("🧩 submit formData:", newFormData);
 
     try {
-      const data = await RequestQuoteService.submitForm(url, newFormData);
+      const method = hasHandover ? "POST" : "PUT";
+
+      const data = await RequestQuoteService.submitFormFlexible({
+        url,
+        data: newFormData,
+        method,
+      });
 
       console.log("✅  submit success:", data);
 
-      // 跳转到主 Tab 的 Sell 页面
       navigation.navigate("Main", {
         screen: "Sell",
       });
     } catch (error) {
-      console.error("Failed to fetch form data:", error);
+      console.error("Failed to submit form:", error);
     } finally {
       setLoading(false);
     }
