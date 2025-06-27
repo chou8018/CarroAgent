@@ -1,4 +1,3 @@
-// src/api/client.ts
 import axios, {
   AxiosInstance,
   AxiosRequestConfig,
@@ -9,7 +8,6 @@ import axios, {
 import { config as appConfig } from "../config/config";
 import { getAccessToken } from "../utils/token";
 
-// 类型扩展
 type CustomResponse<T = any> = AxiosResponse<T> & {
   message?: string;
 };
@@ -45,18 +43,23 @@ class ApiClient {
           ...authHeader,
         });
 
+        // ✅ 如果需要记录请求，可调用自定义 logRequest(config)
         return config;
       },
       (error) => Promise.reject(error)
     );
 
     this.instance.interceptors.response.use(
-      (response: AxiosResponse): CustomResponse => ({
-        ...response,
-        message: response.statusText,
-      }),
+      (response: AxiosResponse): CustomResponse => {
+        // ✅ 如有需要记录响应，可调用 logResponse(response)
+        return {
+          ...response,
+          message: response.statusText,
+        };
+      },
       (error) => {
         if (error.response) {
+          // ✅ 可记录失败响应
           return Promise.reject({
             ...error.response,
             message: error.response.data?.message || error.response.statusText,

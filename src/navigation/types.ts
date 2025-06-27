@@ -15,6 +15,7 @@ export type RootStackParamList = {
   AcceptPrice: {
     offer: SubPageData; // 传递完整的报价数据
   };
+   NetworkLogger: undefined;
 };
 
 export type MainTabParamList = {

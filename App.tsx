@@ -14,6 +14,11 @@ import RequestQuoteScreen from "./src/components/RequestQuote";
 import AppointmentScreen from "./src/screens/AppointmentScreen";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import AcceptPriceScreen from "./src/screens/AcceptPriceScreen";
+import DevFloatingButton from "./src/dev/DevFloatingButton";
+import NetworkLogger from "react-native-network-logger";
+
+console.log("当前环境：", config.env);
+console.log("API 地址：", config.apiUrl);
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -92,7 +97,14 @@ export default function App() {
             component={AcceptPriceScreen}
             options={{ title: "Accept Offer" }}
           />
+          <Stack.Screen
+            name="NetworkLogger"
+            component={NetworkLogger}
+            options={{ title: "Network Debugger" }}
+          />
         </Stack.Navigator>
+        {/* ✅ 加入这个悬浮按钮（只在 __DEV__ 模式下显示） */}
+        {__DEV__ && <DevFloatingButton />}
       </NavigationContainer>
       <GlobalLoading />
     </>

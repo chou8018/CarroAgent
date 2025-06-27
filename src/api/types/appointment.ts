@@ -1,7 +1,7 @@
 // src/api/types/appointment.ts
 
 // 基本响应结构
-interface BaseResponse {
+export interface BaseResponse {
   success: {
     message: string;
   };

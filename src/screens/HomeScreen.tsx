@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Swiper from "react-native-swiper";
 import { useUserStore } from "../store/userStore";
+import { BannerService } from "../api/services/bannerService";
+import type { Banner } from "../api/types/banners";
 
 // 定义导航类型
 type RootStackParamList = {
@@ -36,12 +40,9 @@ const HomeScreen: React.FC = () => {
   const screenWidth = Dimensions.get("window").width;
   const user = useUserStore((state) => state.user);
 
-  // 广告数据
-  const ads = [
-    { id: 1, title: "Special Offer 1", color: "#FF6B00" },
-    { id: 2, title: "Limited Time Deal", color: "#4CAF50" },
-    { id: 3, title: "New Arrivals", color: "#2196F3" },
-  ];
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 功能项配置
   const features = [
@@ -76,7 +77,23 @@ const HomeScreen: React.FC = () => {
       onPress: () => navigation.navigate("Insurance"),
     },
   ];
-  if (!user) return null; // 或显示 loading、登录页等
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const res = await BannerService.getBanners();
+        setBanners(res);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load banners");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBanners();
+  }, []);
+
+  if (!user) return null;
 
   return (
     <ScrollView style={styles.container}>
@@ -89,24 +106,31 @@ const HomeScreen: React.FC = () => {
         </Text>
       </View>
 
-      {/* 广告轮播 - 使用 Swiper 替换 Carousel */}
+      {/* 广告轮播 - 从 API 获取 */}
       <View style={[styles.carouselContainer, { height: 160 }]}>
-        <Swiper
-          autoplay
-          autoplayTimeout={3}
-          showsPagination={true}
-          dotColor="rgba(255,255,255,0.5)"
-          activeDotColor="#FFFFFF"
-        >
-          {ads.map((ad) => (
-            <View
-              key={ad.id}
-              style={[styles.adContainer, { backgroundColor: ad.color }]}
-            >
-              <Text style={styles.adText}>{ad.title}</Text>
-            </View>
-          ))}
-        </Swiper>
+        {loading ? (
+          <ActivityIndicator size="large" style={{ marginTop: 50 }} />
+        ) : error ? (
+          <Text style={{ textAlign: "center", paddingTop: 60 }}>{error}</Text>
+        ) : (
+          <Swiper
+            autoplay
+            autoplayTimeout={3}
+            showsPagination={true}
+            dotColor="rgba(255,255,255,0.5)"
+            activeDotColor="#FFFFFF"
+          >
+            {banners.map((banner) => (
+              <View key={banner.image_url} style={styles.imageBannerWrapper}>
+                <Image
+                  source={{ uri: banner.image_url }}
+                  style={styles.bannerImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ))}
+          </Swiper>
+        )}
       </View>
 
       {/* Sell your cars 部分 */}
@@ -157,17 +181,16 @@ const styles = StyleSheet.create({
   carouselContainer: {
     marginVertical: 16,
   },
-  adContainer: {
+  imageBannerWrapper: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     borderRadius: 12,
     marginHorizontal: 16,
+    overflow: "hidden",
   },
-  adText: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
   },
   sectionContainer: {
     marginHorizontal: 16,

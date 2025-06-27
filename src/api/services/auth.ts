@@ -1,22 +1,42 @@
-// src/services/auth.ts
 import * as AuthSession from "expo-auth-session";
 import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
+import Constants from "expo-constants";
 
-// module scope 临时缓存
+// 临时缓存
 let _codeVerifier: string;
 
-// 配置参数
-const config = {
-  clientId: "98befbc0-782e-4eb3-a327-daf3e5949fa2",
-  redirectUri: "app://sg.carro.agent.staging",
-  authUrl: "https://cx-sso.carro.co",
-  tokenUrl: "https://cx-api-sso.carro.co/api/oauth/token",
-  logoutUrl: "https://stg-api.sso.carro.co/api/client/logout",
-  scopes: ["*"],
+// 所有环境配置
+const ENV_CONFIG = {
+  staging: {
+    clientId: "98befbc0-782e-4eb3-a327-daf3e5949fa2",
+    redirectUri: "app://sg.carro.agent.staging",
+    authUrl: "https://cx-sso.carro.co",
+    tokenUrl: "https://cx-api-sso.carro.co/api/oauth/token",
+    logoutUrl: "https://stg-api.sso.carro.co/api/client/logout",
+  },
+  qa: {
+    clientId: "9d2ff4df-d699-4915-a279-dae2a13f0496",
+    redirectUri: "app://sg.carro.agent.qa",
+    authUrl: "https://uat-sso.carro.co",
+    tokenUrl: "https://uat-api.sso.carro.co/api/oauth/token",
+    logoutUrl: "https://uat-api.sso.carro.co/api/client/logout",
+  },
+  production: {
+    clientId: "9d3250e2-6c2b-48b7-8543-d8e93fa4490b",
+    redirectUri: "app://sg.carro.agent",
+    authUrl: "https://sso.carro.co",
+    tokenUrl: "https://api.sso.carro.co/api/oauth/token",
+    logoutUrl: "https://api.sso.carro.co/api/client/logout",
+  },
 };
 
-// 生成随机字符串用于PKCE
+// 获取当前环境配置
+const ENV = (Constants.expoConfig?.extra?.REACT_APP_ENV ||
+  "staging") as keyof typeof ENV_CONFIG;
+const config = ENV_CONFIG[ENV];
+
+/** 生成随机字符串用于 PKCE */
 const generateRandomString = async (length: number): Promise<string> => {
   const randomBytes = await Crypto.getRandomBytesAsync(length);
   return Array.from(randomBytes)
@@ -24,19 +44,17 @@ const generateRandomString = async (length: number): Promise<string> => {
     .join("");
 };
 
-// Base64URL 编码工具
+/** Base64URL 编码 */
 const base64UrlEncode = (str: string): string => {
   return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
 
-// 获取授权码并换取 access_token
 export const loginWithCARRO = async (): Promise<{
   accessToken: string;
   refreshToken?: string;
   idToken?: string;
 }> => {
   try {
-    // 生成 verifier 并缓存
     if (!_codeVerifier) {
       _codeVerifier = await generateRandomString(64);
     }
@@ -48,17 +66,15 @@ export const loginWithCARRO = async (): Promise<{
     );
     const codeChallenge = base64UrlEncode(rawChallenge);
 
-    // 构建授权 URL
     const authUrl =
       `${config.authUrl}?` +
       `client_id=${config.clientId}&` +
       `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
       `response_type=code&` +
-      `scope=${encodeURIComponent(config.scopes.join(" "))}&` +
+      `scope=${encodeURIComponent("*")}&` +
       `code_challenge=${codeChallenge}&` +
       `code_challenge_method=S256`;
 
-    // 打开系统浏览器认证
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
       config.redirectUri
@@ -69,7 +85,6 @@ export const loginWithCARRO = async (): Promise<{
       const code = params.get("code");
       if (!code) throw new Error("Authorization code not found");
 
-      // 请求 token
       const tokenResponse = await fetch(config.tokenUrl, {
         method: "POST",
         headers: {
@@ -87,7 +102,6 @@ export const loginWithCARRO = async (): Promise<{
 
       const json = await tokenResponse.json();
 
-      // 清除 verifier
       _codeVerifier = "";
 
       if (!json.success || !json.data?.access_token) {
@@ -108,7 +122,6 @@ export const loginWithCARRO = async (): Promise<{
   }
 };
 
-// 退出登录
 export const logoutFromCARRO = async (token: string): Promise<void> => {
   try {
     await fetch(config.logoutUrl, {

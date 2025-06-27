@@ -7,7 +7,7 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
-import type { SubPageData } from "../SellScreen"; // 根据实际路径调整
+import type { SubPageData } from "../SellScreen/types"; // 根据实际路径调整
 
 interface RejectOfferModalProps {
   visible: boolean;
@@ -63,7 +63,11 @@ const RejectOfferModal: React.FC<RejectOfferModalProps> = ({
           <TextInput
             style={styles.priceInput}
             keyboardType="numeric"
-            placeholder={currentOffer?.target_price || "RM 0"}
+            placeholder={
+              currentOffer?.target_price != null
+                ? `RM ${currentOffer.target_price}`
+                : "RM 0"
+            }
             value={targetPrice}
             onChangeText={setTargetPrice}
           />

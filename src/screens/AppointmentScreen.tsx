@@ -268,20 +268,20 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
 
     const appointment = isMobileSelected
       ? {
-          location_type: "mobile",
-          postcode: postCode,
-          location_id: locationId,
-          start_time: date,
-          time_slot,
-          address,
-        }
+        location_type: "mobile",
+        postcode: postCode,
+        location_id: locationId,
+        start_time: date,
+        time_slot,
+        address,
+      }
       : {
-          location_type: "inspection_point",
-          location_id: locationId,
-          location_name: selectedLocation?.title,
-          start_time: date,
-          time_slot,
-        };
+        location_type: "inspection_point",
+        location_id: locationId,
+        location_name: selectedLocation?.title,
+        start_time: date,
+        time_slot,
+      };
 
     // 根据 hasHandover 处理 url 和 formData 字段
     const url = hasHandover
@@ -295,13 +295,13 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = () => {
 
     const newFormData = hasHandover
       ? {
-          ...formData,
-          handover_appointment: appointment,
-        }
+        ...formData,
+        handover_appointment: appointment,
+      }
       : {
-          ...formData,
-          inspection_appointment: appointment,
-        };
+        ...formData,
+        inspection_appointment: appointment,
+      };
 
     console.log("🧩 submit formData:", newFormData);
 

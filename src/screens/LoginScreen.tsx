@@ -36,7 +36,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       // 2. 获取用户信息
       const user = await UserService.getCurrentUser();
       useUserStore.getState().setUser(user);
-      navigation.replace("Main");
+      navigation.replace("Main", {
+        screen: "Home",
+      });
     } catch (error) {
       console.error("Login failed:", error);
     } finally {
